@@ -19,3 +19,11 @@
 
 # Go workspace file
 go.work
+
+rabbitmq_data/
+.vscode/
+.idea/
+.testnet/
+.DS_Store
+tmp/
+build/
