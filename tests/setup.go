@@ -130,6 +130,7 @@ func buildNExpiryEvents(numOfEvent int) []*client.ExpiredStakingEvent {
 		expiryEv := &client.ExpiredStakingEvent{
 			EventType:        client.ExpiredStakingEventType,
 			StakingTxHashHex: "0x1234567890abcdef" + fmt.Sprint(i),
+			TxType:           client.ActiveTxType,
 		}
 		expiryEvents = append(expiryEvents, expiryEv)
 	}
