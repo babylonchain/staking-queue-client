@@ -99,6 +99,16 @@ func (c *RabbitMqClient) DeleteMessage(deliveryTag string) error {
 	return c.channel.Ack(deliveryTagInt, false)
 }
 
+// ReQueueMessage requeues a message back to the queue. In RabbitMQ, this is equivalent to rejecting the message.
+// The deliveryTag is the unique identifier for the message.
+func (c *RabbitMqClient) ReQueueMessage(deliveryTag string) error {
+	deliveryTagInt, err := strconv.ParseUint(deliveryTag, 10, 64)
+	if err != nil {
+		return err
+	}
+	return c.channel.Nack(deliveryTagInt, false, true)
+}
+
 // SendMessage sends a message to the queue. the ctx is used to control the timeout of the operation.
 func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) error {
 	// Ensure the channel is open
