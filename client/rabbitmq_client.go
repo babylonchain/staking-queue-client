@@ -102,17 +102,9 @@ func (c *RabbitMqClient) DeleteMessage(deliveryTag string) error {
 	return c.channel.Ack(deliveryTagInt, false)
 }
 
-// ReQueueMessage requeues a message back to the queue. In RabbitMQ, this is equivalent to rejecting the message.
-// The deliveryTag is the unique identifier for the message.
-func (c *RabbitMqClient) ReQueueMessage(deliveryTag string) error {
-	deliveryTagInt, err := strconv.ParseUint(deliveryTag, 10, 64)
-	if err != nil {
-		return err
-	}
-	return c.channel.Nack(deliveryTagInt, false, true)
-}
-
-func (c *RabbitMqClient) ReQueueMessage2(ctx context.Context, message QueueMessage) error {
+// ReQueueMessage requeues a message back to the queue. This is done by sending the message again with an incremented counter.
+// The original message is then deleted from the queue.
+func (c *RabbitMqClient) ReQueueMessage(ctx context.Context, message QueueMessage) error {
 	err := c.sendMessageWithAttempts(ctx, message.Body, message.IncrementRetryAttempts())
 	if err != nil {
 		return fmt.Errorf("failed to requeue message: %w", err)
