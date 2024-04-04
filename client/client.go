@@ -5,15 +5,15 @@ import "context"
 type QueueMessage struct {
 	Body          string
 	Receipt       string
-	RetryAttempts int
+	RetryAttempts int32
 }
 
-func (m QueueMessage) IncrementRetryAttempts() int {
+func (m QueueMessage) IncrementRetryAttempts() int32 {
 	m.RetryAttempts++
 	return m.RetryAttempts
 }
 
-func (m QueueMessage) GetRetryAttempts() int {
+func (m QueueMessage) GetRetryAttempts() int32 {
 	return m.RetryAttempts
 }
 

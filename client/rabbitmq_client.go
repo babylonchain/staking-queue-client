@@ -76,7 +76,11 @@ func (c *RabbitMqClient) ReceiveMessages() (<-chan QueueMessage, error) {
 				if !ok {
 					return // Channel closed, exit goroutine
 				}
-				currentAttempt := d.Headers["x-processing-attempts"].(int)
+				attempts := d.Headers["x-processing-attempts"]
+				if attempts == nil {
+					attempts = int32(0)
+				}
+				currentAttempt := attempts.(int32)
 
 				output <- QueueMessage{
 					Body:          string(d.Body),
@@ -119,7 +123,7 @@ func (c *RabbitMqClient) ReQueueMessage(ctx context.Context, message QueueMessag
 }
 
 // SendMessage sends a message to the queue. the ctx is used to control the timeout of the operation.
-func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBody string, attempts int) error {
+func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBody string, attempts int32) error {
 	// Ensure the channel is open
 	if c.channel == nil {
 		return fmt.Errorf("RabbitMQ channel not initialized")
