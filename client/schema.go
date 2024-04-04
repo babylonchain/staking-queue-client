@@ -19,7 +19,6 @@ type EventType int
 type EventMessage interface {
 	GetEventType() EventType
 	GetStakingTxHashHex() string
-	GetRetryCount() int
 }
 
 type ActiveStakingEvent struct {
@@ -33,7 +32,6 @@ type ActiveStakingEvent struct {
 	StakingTimeLock       uint64    `json:"staking_timelock"`
 	StakingOutputIndex    uint64    `json:"staking_output_index"`
 	StakingTxHex          string    `json:"staking_tx_hex"`
-	RetryCount            int       `json:"retry_count"`
 }
 
 func (e ActiveStakingEvent) GetEventType() EventType {
@@ -42,10 +40,6 @@ func (e ActiveStakingEvent) GetEventType() EventType {
 
 func (e ActiveStakingEvent) GetStakingTxHashHex() string {
 	return e.StakingTxHashHex
-}
-
-func (e ActiveStakingEvent) GetRetryCount() int {
-	return e.RetryCount
 }
 
 func NewActiveStakingEvent(
@@ -70,7 +64,6 @@ func NewActiveStakingEvent(
 		StakingTimeLock:       stakingTimeLock,
 		StakingOutputIndex:    stakingOutputIndex,
 		StakingTxHex:          stakingTxHex,
-		RetryCount:            0,
 	}
 }
 
@@ -83,7 +76,6 @@ type UnbondingStakingEvent struct {
 	UnbondingOutputIndex    uint64    `json:"unbonding_output_index"`
 	UnbondingTxHex          string    `json:"unbonding_tx_hex"`
 	UnbondingTxHashHex      string    `json:"unbonding_tx_hash_hex"`
-	RetryCount              int       `json:"retry_count"`
 }
 
 func (e UnbondingStakingEvent) GetEventType() EventType {
@@ -92,10 +84,6 @@ func (e UnbondingStakingEvent) GetEventType() EventType {
 
 func (e UnbondingStakingEvent) GetStakingTxHashHex() string {
 	return e.StakingTxHashHex
-}
-
-func (e UnbondingStakingEvent) GetRetryCount() int {
-	return e.RetryCount
 }
 
 func NewUnbondingStakingEvent(
@@ -116,14 +104,12 @@ func NewUnbondingStakingEvent(
 		UnbondingOutputIndex:    unbondingOutputIndex,
 		UnbondingTxHex:          unbondingTxHex,
 		UnbondingTxHashHex:      unbondingTxHashHex,
-		RetryCount:              0,
 	}
 }
 
 type WithdrawStakingEvent struct {
 	EventType        EventType `json:"event_type"` // always 3. WithdrawStakingEventType
 	StakingTxHashHex string    `json:"staking_tx_hash_hex"`
-	RetryCount       int       `json:"retry_count"`
 }
 
 func (e WithdrawStakingEvent) GetEventType() EventType {
@@ -134,15 +120,10 @@ func (e WithdrawStakingEvent) GetStakingTxHashHex() string {
 	return e.StakingTxHashHex
 }
 
-func (e WithdrawStakingEvent) GetRetryCount() int {
-	return e.RetryCount
-}
-
 func NewWithdrawStakingEvent(stakingTxHashHex string) WithdrawStakingEvent {
 	return WithdrawStakingEvent{
 		EventType:        WithdrawStakingEventType,
 		StakingTxHashHex: stakingTxHashHex,
-		RetryCount:       0,
 	}
 }
 
@@ -161,7 +142,6 @@ type ExpiredStakingEvent struct {
 	EventType        EventType     `json:"event_type"` // always 4. ExpiredStakingEventType
 	StakingTxHashHex string        `json:"staking_tx_hash_hex"`
 	TxType           StakingTxType `json:"tx_type"`
-	RetryCount       int           `json:"retry_count"`
 }
 
 func (e ExpiredStakingEvent) GetEventType() EventType {
@@ -172,15 +152,10 @@ func (e ExpiredStakingEvent) GetStakingTxHash() string {
 	return e.StakingTxHashHex
 }
 
-func (e ExpiredStakingEvent) GetRetryCount() int {
-	return e.RetryCount
-}
-
 func NewExpiredStakingEvent(stakingTxHashHex string, txType StakingTxType) ExpiredStakingEvent {
 	return ExpiredStakingEvent{
 		EventType:        ExpiredStakingEventType,
 		StakingTxHashHex: stakingTxHashHex,
 		TxType:           txType,
-		RetryCount:       0,
 	}
 }

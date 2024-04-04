@@ -3,8 +3,18 @@ package client
 import "context"
 
 type QueueMessage struct {
-	Body    string
-	Receipt string
+	Body          string
+	Receipt       string
+	RetryAttempts int
+}
+
+func (m QueueMessage) IncrementRetryAttempts() int {
+	m.RetryAttempts++
+	return m.RetryAttempts
+}
+
+func (m QueueMessage) GetRetryAttempts() int {
+	return m.RetryAttempts
 }
 
 // A common interface for queue clients regardless if it's a SQS, RabbitMQ, etc.

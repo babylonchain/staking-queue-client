@@ -76,9 +76,12 @@ func (c *RabbitMqClient) ReceiveMessages() (<-chan QueueMessage, error) {
 				if !ok {
 					return // Channel closed, exit goroutine
 				}
+				currentAttempt := d.Headers["x-processing-attempts"].(int)
+
 				output <- QueueMessage{
-					Body:    string(d.Body),
-					Receipt: strconv.FormatUint(d.DeliveryTag, 10),
+					Body:          string(d.Body),
+					Receipt:       strconv.FormatUint(d.DeliveryTag, 10),
+					RetryAttempts: currentAttempt,
 				}
 			case <-c.stopCh:
 				return // Stop signal received, exit goroutine
@@ -109,11 +112,30 @@ func (c *RabbitMqClient) ReQueueMessage(deliveryTag string) error {
 	return c.channel.Nack(deliveryTagInt, false, true)
 }
 
+func (c *RabbitMqClient) ReQueueMessage2(ctx context.Context, message QueueMessage) error {
+	err := c.sendMessageWithAttempts(ctx, message.Body, message.IncrementRetryAttempts())
+	if err != nil {
+		return fmt.Errorf("failed to requeue message: %w", err)
+	}
+
+	err = c.DeleteMessage(message.Receipt)
+	if err != nil {
+		return fmt.Errorf("failed to delete message while requeuing: %w", err)
+	}
+
+	return nil
+}
+
 // SendMessage sends a message to the queue. the ctx is used to control the timeout of the operation.
-func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) error {
+func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBody string, attempts int) error {
 	// Ensure the channel is open
 	if c.channel == nil {
 		return fmt.Errorf("RabbitMQ channel not initialized")
+	}
+
+	// Prepare new headers with the incremented counter
+	newHeaders := amqp.Table{
+		"x-processing-attempts": attempts,
 	}
 
 	// Publish a message to the queue
@@ -127,6 +149,7 @@ func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) er
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "text/plain",
 			Body:         []byte(messageBody),
+			Headers:      newHeaders,
 		},
 	)
 
@@ -146,6 +169,11 @@ func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) er
 	}
 
 	return nil
+}
+
+// SendMessage sends a message to the queue. the ctx is used to control the timeout of the operation.
+func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) error {
+	return c.sendMessageWithAttempts(ctx, messageBody, 0)
 }
 
 // Stop stops the message receiving process.
