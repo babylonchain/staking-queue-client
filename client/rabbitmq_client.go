@@ -76,9 +76,16 @@ func (c *RabbitMqClient) ReceiveMessages() (<-chan QueueMessage, error) {
 				if !ok {
 					return // Channel closed, exit goroutine
 				}
+				attempts := d.Headers["x-processing-attempts"]
+				if attempts == nil {
+					attempts = int32(0)
+				}
+				currentAttempt := attempts.(int32)
+
 				output <- QueueMessage{
-					Body:    string(d.Body),
-					Receipt: strconv.FormatUint(d.DeliveryTag, 10),
+					Body:          string(d.Body),
+					Receipt:       strconv.FormatUint(d.DeliveryTag, 10),
+					RetryAttempts: currentAttempt,
 				}
 			case <-c.stopCh:
 				return // Stop signal received, exit goroutine
@@ -99,21 +106,32 @@ func (c *RabbitMqClient) DeleteMessage(deliveryTag string) error {
 	return c.channel.Ack(deliveryTagInt, false)
 }
 
-// ReQueueMessage requeues a message back to the queue. In RabbitMQ, this is equivalent to rejecting the message.
-// The deliveryTag is the unique identifier for the message.
-func (c *RabbitMqClient) ReQueueMessage(deliveryTag string) error {
-	deliveryTagInt, err := strconv.ParseUint(deliveryTag, 10, 64)
+// ReQueueMessage requeues a message back to the queue. This is done by sending the message again with an incremented counter.
+// The original message is then deleted from the queue.
+func (c *RabbitMqClient) ReQueueMessage(ctx context.Context, message QueueMessage) error {
+	err := c.sendMessageWithAttempts(ctx, message.Body, message.IncrementRetryAttempts())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to requeue message: %w", err)
 	}
-	return c.channel.Nack(deliveryTagInt, false, true)
+
+	err = c.DeleteMessage(message.Receipt)
+	if err != nil {
+		return fmt.Errorf("failed to delete message while requeuing: %w", err)
+	}
+
+	return nil
 }
 
 // SendMessage sends a message to the queue. the ctx is used to control the timeout of the operation.
-func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) error {
+func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBody string, attempts int32) error {
 	// Ensure the channel is open
 	if c.channel == nil {
 		return fmt.Errorf("RabbitMQ channel not initialized")
+	}
+
+	// Prepare new headers with the incremented counter
+	newHeaders := amqp.Table{
+		"x-processing-attempts": attempts,
 	}
 
 	// Publish a message to the queue
@@ -127,6 +145,7 @@ func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) er
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "text/plain",
 			Body:         []byte(messageBody),
+			Headers:      newHeaders,
 		},
 	)
 
@@ -146,6 +165,11 @@ func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) er
 	}
 
 	return nil
+}
+
+// SendMessage sends a message to the queue. the ctx is used to control the timeout of the operation.
+func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) error {
+	return c.sendMessageWithAttempts(ctx, messageBody, 0)
 }
 
 // Stop stops the message receiving process.
