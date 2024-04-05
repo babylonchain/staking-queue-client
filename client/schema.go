@@ -28,7 +28,7 @@ type ActiveStakingEvent struct {
 	FinalityProviderPkHex string    `json:"finality_provider_pk_hex"`
 	StakingValue          uint64    `json:"staking_value"`
 	StakingStartHeight    uint64    `json:"staking_start_height"`
-	StakingStartTimestamp string    `json:"staking_start_timestamp"`
+	StakingStartTimestamp int64     `json:"staking_start_timestamp"`
 	StakingTimeLock       uint64    `json:"staking_timelock"`
 	StakingOutputIndex    uint64    `json:"staking_output_index"`
 	StakingTxHex          string    `json:"staking_tx_hex"`
@@ -48,7 +48,7 @@ func NewActiveStakingEvent(
 	finalityProviderPkHex string,
 	stakingValue uint64,
 	stakingStartHeight uint64,
-	stakingStartTimestamp string,
+	stakingStartTimestamp int64,
 	stakingTimeLock uint64,
 	stakingOutputIndex uint64,
 	stakingTxHex string,
@@ -71,7 +71,7 @@ type UnbondingStakingEvent struct {
 	EventType               EventType `json:"event_type"` // always 2. UnbondingStakingEventType
 	StakingTxHashHex        string    `json:"staking_tx_hash_hex"`
 	UnbondingStartHeight    uint64    `json:"unbonding_start_height"`
-	UnbondingStartTimestamp string    `json:"unbonding_start_timestamp"`
+	UnbondingStartTimestamp int64     `json:"unbonding_start_timestamp"`
 	UnbondingTimeLock       uint64    `json:"unbonding_timelock"`
 	UnbondingOutputIndex    uint64    `json:"unbonding_output_index"`
 	UnbondingTxHex          string    `json:"unbonding_tx_hex"`
@@ -89,7 +89,7 @@ func (e UnbondingStakingEvent) GetStakingTxHashHex() string {
 func NewUnbondingStakingEvent(
 	stakingTxHashHex string,
 	unbondingStartHeight uint64,
-	unbondingStartTimestamp string,
+	unbondingStartTimestamp int64,
 	unbondingTimeLock uint64,
 	unbondingOutputIndex uint64,
 	unbondingTxHex string,
