@@ -148,7 +148,7 @@ func (e ExpiredStakingEvent) GetEventType() EventType {
 	return ExpiredStakingEventType
 }
 
-func (e ExpiredStakingEvent) GetStakingTxHash() string {
+func (e ExpiredStakingEvent) GetStakingTxHashHex() string {
 	return e.StakingTxHashHex
 }
 
