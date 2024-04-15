@@ -7,6 +7,7 @@ const (
 	UnbondingStakingQueueName string = "unbonding_staking_queue"
 	WithdrawStakingQueueName  string = "withdraw_staking_queue"
 	ExpiredStakingQueueName   string = "expired_staking_queue"
+	StakingStatsQueueName     string = "staking_stats_queue"
 )
 
 const (
