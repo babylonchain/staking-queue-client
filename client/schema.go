@@ -1,5 +1,7 @@
 package client
 
+import "fmt"
+
 const (
 	ActiveStakingQueueName    string = "active_staking_queue"
 	UnbondingStakingQueueName string = "unbonding_staking_queue"
@@ -12,6 +14,7 @@ const (
 	UnbondingStakingEventType EventType = 2
 	WithdrawStakingEventType  EventType = 3
 	ExpiredStakingEventType   EventType = 4
+	StakingStatsEventType     EventType = 5
 )
 
 type EventType int
@@ -138,6 +141,17 @@ func (s StakingTxType) ToString() string {
 	return string(s)
 }
 
+func FromStringToStakingTxType(s string) (StakingTxType, error) {
+	switch s {
+	case ActiveTxType.ToString():
+		return ActiveTxType, nil
+	case UnbondingTxType.ToString():
+		return UnbondingTxType, nil
+	default:
+		return "", fmt.Errorf("invalid staking transaction type: %s", s)
+	}
+}
+
 type ExpiredStakingEvent struct {
 	EventType        EventType     `json:"event_type"` // always 4. ExpiredStakingEventType
 	StakingTxHashHex string        `json:"staking_tx_hash_hex"`
@@ -157,5 +171,39 @@ func NewExpiredStakingEvent(stakingTxHashHex string, txType StakingTxType) Expir
 		EventType:        ExpiredStakingEventType,
 		StakingTxHashHex: stakingTxHashHex,
 		TxType:           txType,
+	}
+}
+
+type StakingStatsEvent struct {
+	EventType             EventType     `json:"event_type"` // always 5. StakingStatsEventType
+	StakingTxHashHex      string        `json:"staking_tx_hash_hex"`
+	TxType                StakingTxType `json:"tx_type"`
+	StakingValue          uint64        `json:"staking_value"`
+	StakerPkHex           string        `json:"staker_pk_hex"`
+	FinalityProviderPkHex string        `json:"finality_provider_pk_hex"`
+}
+
+func (e StakingStatsEvent) GetEventType() EventType {
+	return StakingStatsEventType
+}
+
+func (e StakingStatsEvent) GetStakingTxHashHex() string {
+	return e.StakingTxHashHex
+}
+
+func NewStakingStatsEvent(
+	stakingTxHashHex string,
+	txType StakingTxType,
+	stakingValue uint64,
+	stakerPkHex string,
+	finalityProviderPkHex string,
+) StakingStatsEvent {
+	return StakingStatsEvent{
+		EventType:             StakingStatsEventType,
+		StakingTxHashHex:      stakingTxHashHex,
+		TxType:                txType,
+		StakingValue:          stakingValue,
+		StakerPkHex:           stakerPkHex,
+		FinalityProviderPkHex: finalityProviderPkHex,
 	}
 }
