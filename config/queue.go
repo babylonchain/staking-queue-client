@@ -11,6 +11,7 @@ const (
 	defaultQueueUrl                 = "localhost:5672"
 	defaultQueueProcessingTimeout   = 5 * time.Second
 	defaultQueueMsgMaxRetryAttempts = 10
+	defaultReQueueDelayTime         = 5
 )
 
 type QueueConfig struct {
@@ -19,6 +20,7 @@ type QueueConfig struct {
 	Url                    string        `mapstructure:"url"`
 	QueueProcessingTimeout time.Duration `mapstructure:"processing_timeout"`
 	MsgMaxRetryAttempts    int32         `mapstructure:"msg_max_retry_attempts"`
+	ReQueueDelayTime       int           `mapstructure:"requeue_delay_time"`
 }
 
 func (cfg *QueueConfig) Validate() error {
@@ -42,6 +44,11 @@ func (cfg *QueueConfig) Validate() error {
 		return fmt.Errorf("invalid queue message max retry attempts")
 	}
 
+	if cfg.ReQueueDelayTime <= 0 {
+		return fmt.Errorf(`invalid requeue delay time. 
+		It should be greater than 0, the unit is seconds`)
+	}
+
 	return nil
 }
 
@@ -52,5 +59,6 @@ func DefaultQueueConfig() *QueueConfig {
 		Url:                    defaultQueueUrl,
 		QueueProcessingTimeout: defaultQueueProcessingTimeout,
 		MsgMaxRetryAttempts:    defaultQueueMsgMaxRetryAttempts,
+		ReQueueDelayTime:       defaultReQueueDelayTime,
 	}
 }

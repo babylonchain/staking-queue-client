@@ -20,22 +20,22 @@ type QueueManager struct {
 }
 
 func NewQueueManager(cfg *config.QueueConfig, logger *zap.Logger) (*QueueManager, error) {
-	stakingQueue, err := client.NewQueueClient(cfg.Url, cfg.QueueUser, cfg.QueuePassword, client.ActiveStakingQueueName)
+	stakingQueue, err := client.NewQueueClient(cfg, client.ActiveStakingQueueName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create staking queue: %w", err)
 	}
 
-	unbondingQueue, err := client.NewQueueClient(cfg.Url, cfg.QueueUser, cfg.QueuePassword, client.UnbondingStakingQueueName)
+	unbondingQueue, err := client.NewQueueClient(cfg, client.UnbondingStakingQueueName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create unbonding queue: %w", err)
 	}
 
-	withdrawQueue, err := client.NewQueueClient(cfg.Url, cfg.QueueUser, cfg.QueuePassword, client.WithdrawStakingQueueName)
+	withdrawQueue, err := client.NewQueueClient(cfg, client.WithdrawStakingQueueName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create withdraw queue: %w", err)
 	}
 
-	expiryQueue, err := client.NewQueueClient(cfg.Url, cfg.QueueUser, cfg.QueuePassword, client.ExpiredStakingQueueName)
+	expiryQueue, err := client.NewQueueClient(cfg, client.ExpiredStakingQueueName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create withdraw queue: %w", err)
 	}
@@ -121,6 +121,22 @@ func (qc *QueueManager) PushExpiryEvent(ev *client.ExpiredStakingEvent) error {
 	return nil
 }
 
+// requeue message
+func (qc *QueueManager) ReQueueMessage(ctx context.Context, message client.QueueMessage, queueName string) error {
+	switch queueName {
+	case client.ActiveStakingQueueName:
+		return qc.StakingQueue.ReQueueMessage(ctx, message)
+	case client.UnbondingStakingQueueName:
+		return qc.UnbondingQueue.ReQueueMessage(ctx, message)
+	case client.WithdrawStakingQueueName:
+		return qc.WithdrawQueue.ReQueueMessage(ctx, message)
+	case client.ExpiredStakingQueueName:
+		return qc.ExpiryQueue.ReQueueMessage(ctx, message)
+	default:
+		return fmt.Errorf("unknown queue name: %s", queueName)
+	}
+}
+
 func (qc *QueueManager) Stop() error {
 	if err := qc.StakingQueue.Stop(); err != nil {
 		return err
@@ -131,6 +147,10 @@ func (qc *QueueManager) Stop() error {
 	}
 
 	if err := qc.WithdrawQueue.Stop(); err != nil {
+		return err
+	}
+
+	if err := qc.ExpiryQueue.Stop(); err != nil {
 		return err
 	}
 

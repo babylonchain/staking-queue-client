@@ -5,18 +5,26 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/babylonchain/staking-queue-client/config"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+const (
+	dlxName             = "common_dlx"
+	dlxRoutingPostfix   = "_routing_key"
+	delayedQueuePostfix = "_delay"
+)
+
 type RabbitMqClient struct {
-	connection *amqp.Connection
-	channel    *amqp.Channel
-	queueName  string
-	stopCh     chan struct{} // This is used to gracefully stop the message receiving loop
+	connection         *amqp.Connection
+	channel            *amqp.Channel
+	queueName          string
+	stopCh             chan struct{} // This is used to gracefully stop the message receiving loop
+	delayedRequeueTime int
 }
 
-func NewRabbitMqClient(queueURL, user, pass, queueName string) (*RabbitMqClient, error) {
-	amqpURI := fmt.Sprintf("amqp://%s:%s@%s", user, pass, queueURL)
+func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqClient, error) {
+	amqpURI := fmt.Sprintf("amqp://%s:%s@%s", config.QueueUser, config.QueuePassword, config.Url)
 
 	conn, err := amqp.Dial(amqpURI)
 	if err != nil {
@@ -28,15 +36,51 @@ func NewRabbitMqClient(queueURL, user, pass, queueName string) (*RabbitMqClient,
 		return nil, err
 	}
 
-	// Declare a queue that will be created if not exists
+	// Declare a single common DLX for all queues
+	err = ch.ExchangeDeclare(dlxName, "direct", true, false, false, false, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Declare a delay queue specific to this particular queue
+	delayQueueName := queueName + delayedQueuePostfix
+	_, err = ch.QueueDeclare(
+		delayQueueName,
+		true,
+		false,
+		false,
+		false,
+		amqp.Table{
+			// Default exchange to route messages back to the main queue
+			// The "" in rabbitMq referring to the default exchange which allows
+			// to route messages to the queue by the routing key which is the queue name
+			"x-dead-letter-exchange":    "",
+			"x-dead-letter-routing-key": queueName,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Declare the queue that will be created if not exists
+	customDlxRoutingKey := queueName + dlxRoutingPostfix
 	_, err = ch.QueueDeclare(
 		queueName, // name
 		true,      // durable
 		false,     // delete when unused
 		false,     // exclusive
 		false,     // no-wait
-		nil,       // arguments
+		amqp.Table{
+			"x-dead-letter-exchange":    dlxName,
+			"x-dead-letter-routing-key": customDlxRoutingKey,
+		},
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Bind the delay queue to the common DLX
+	err = ch.QueueBind(delayQueueName, customDlxRoutingKey, dlxName, false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -47,10 +91,11 @@ func NewRabbitMqClient(queueURL, user, pass, queueName string) (*RabbitMqClient,
 	}
 
 	return &RabbitMqClient{
-		connection: conn,
-		channel:    ch,
-		queueName:  queueName,
-		stopCh:     make(chan struct{}),
+		connection:         conn,
+		channel:            ch,
+		queueName:          queueName,
+		stopCh:             make(chan struct{}),
+		delayedRequeueTime: config.ReQueueDelayTime,
 	}, nil
 }
 
@@ -106,10 +151,13 @@ func (c *RabbitMqClient) DeleteMessage(deliveryTag string) error {
 	return c.channel.Ack(deliveryTagInt, false)
 }
 
-// ReQueueMessage requeues a message back to the queue. This is done by sending the message again with an incremented counter.
+// ReQueueMessage requeues a message back to the queue with a delay.
+// This is done by sending the message again with an incremented counter.
 // The original message is then deleted from the queue.
 func (c *RabbitMqClient) ReQueueMessage(ctx context.Context, message QueueMessage) error {
-	err := c.sendMessageWithAttempts(ctx, message.Body, message.IncrementRetryAttempts())
+	// For requeueing, we will send the message to a delay queue that has a TTL pre-configured.
+	delayQueueName := c.queueName + delayedQueuePostfix
+	err := c.sendMessageWithAttempts(ctx, message.Body, delayQueueName, message.IncrementRetryAttempts(), c.delayedRequeueTime)
 	if err != nil {
 		return fmt.Errorf("failed to requeue message: %w", err)
 	}
@@ -123,7 +171,7 @@ func (c *RabbitMqClient) ReQueueMessage(ctx context.Context, message QueueMessag
 }
 
 // SendMessage sends a message to the queue. the ctx is used to control the timeout of the operation.
-func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBody string, attempts int32) error {
+func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBody, queueName string, attempts int32, ttl int) error {
 	// Ensure the channel is open
 	if c.channel == nil {
 		return fmt.Errorf("RabbitMQ channel not initialized")
@@ -137,31 +185,32 @@ func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBod
 	// Publish a message to the queue
 	confirmation, err := c.channel.PublishWithDeferredConfirmWithContext(
 		ctx,
-		"",          // exchange: Use the default exchange
-		c.queueName, // routing key: The queue name
-		true,        // mandatory: true indicates the server must route the message to a queue, otherwise error
-		false,       // immediate: false indicates the server may wait to send the message until a consumer is available
+		"",        // exchange: Use the default exchange
+		queueName, // routing key: The queue this message should be routed to
+		true,      // mandatory: true indicates the server must route the message to a queue, otherwise error
+		false,     // immediate: false indicates the server may wait to send the message until a consumer is available
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "text/plain",
 			Body:         []byte(messageBody),
 			Headers:      newHeaders,
+			Expiration:   strconv.Itoa(ttl * 1000),
 		},
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to publish a message to queue %s: %w", c.queueName, err)
+		return fmt.Errorf("failed to publish a message to queue %s: %w", queueName, err)
 	}
 
 	if confirmation == nil {
-		return fmt.Errorf("message not confirmed when publishing into queue %s", c.queueName)
+		return fmt.Errorf("message not confirmed when publishing into queue %s", queueName)
 	}
 	confirmed, err := confirmation.WaitContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to confirm message when publishing into queue %s: %w", c.queueName, err)
+		return fmt.Errorf("failed to confirm message when publishing into queue %s: %w", queueName, err)
 	}
 	if !confirmed {
-		return fmt.Errorf("message not confirmed when publishing into queue %s", c.queueName)
+		return fmt.Errorf("message not confirmed when publishing into queue %s", queueName)
 	}
 
 	return nil
@@ -169,7 +218,7 @@ func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBod
 
 // SendMessage sends a message to the queue. the ctx is used to control the timeout of the operation.
 func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) error {
-	return c.sendMessageWithAttempts(ctx, messageBody, 0)
+	return c.sendMessageWithAttempts(ctx, messageBody, c.queueName, 0, 0)
 }
 
 // Stop stops the message receiving process.

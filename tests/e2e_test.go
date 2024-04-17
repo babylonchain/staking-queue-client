@@ -1,8 +1,10 @@
 package tests
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -19,11 +21,10 @@ func TestStakingEvent(t *testing.T) {
 	activeStakingEvents := buildActiveNStakingEvents(mockStakerHash, numStakingEvents)
 	queueCfg := config.DefaultQueueConfig()
 
-	queueManager := setupTestQueueConsumer(t, queueCfg)
-	defer func() {
-		err := queueManager.Stop()
-		require.NoError(t, err)
-	}()
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
 
 	stakingEventReceivedChan, err := queueManager.StakingQueue.ReceiveMessages()
 	require.NoError(t, err)
@@ -45,11 +46,10 @@ func TestUnbondingEvent(t *testing.T) {
 	unbondingEvents := buildNUnbondingEvents(numUnbondingEvents)
 	queueCfg := config.DefaultQueueConfig()
 
-	queueManager := setupTestQueueConsumer(t, queueCfg)
-	defer func() {
-		err := queueManager.Stop()
-		require.NoError(t, err)
-	}()
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
 
 	unbondingEvReceivedChan, err := queueManager.UnbondingQueue.ReceiveMessages()
 	require.NoError(t, err)
@@ -71,11 +71,10 @@ func TestWithdrawEvent(t *testing.T) {
 	withdrawEvents := buildNWithdrawEvents(numWithdrawEvents)
 	queueCfg := config.DefaultQueueConfig()
 
-	queueManager := setupTestQueueConsumer(t, queueCfg)
-	defer func() {
-		err := queueManager.Stop()
-		require.NoError(t, err)
-	}()
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
 
 	withdrawEventsReceivedChan, err := queueManager.WithdrawQueue.ReceiveMessages()
 	require.NoError(t, err)
@@ -97,11 +96,10 @@ func TestExpiryEvent(t *testing.T) {
 	expiryEvents := buildNExpiryEvents(numExpiryEvents)
 	queueCfg := config.DefaultQueueConfig()
 
-	queueManager := setupTestQueueConsumer(t, queueCfg)
-	defer func() {
-		err := queueManager.Stop()
-		require.NoError(t, err)
-	}()
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
 
 	expiryEventsReceivedChan, err := queueManager.ExpiryQueue.ReceiveMessages()
 	require.NoError(t, err)
@@ -116,4 +114,65 @@ func TestExpiryEvent(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, ev, &expiryEvent)
 	}
+}
+
+func TestReQueueEvent(t *testing.T) {
+	activeStakingEvents := buildActiveNStakingEvents(mockStakerHash, 1)
+	queueCfg := config.DefaultQueueConfig()
+
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
+
+	stakingEventReceivedChan, err := queueManager.StakingQueue.ReceiveMessages()
+	require.NoError(t, err)
+
+	ev := activeStakingEvents[0]
+	err = queueManager.PushStakingEvent(ev)
+	require.NoError(t, err)
+
+	var receivedEv client.QueueMessage
+
+	select {
+	case receivedEv = <-stakingEventReceivedChan:
+	case <-time.After(10 * time.Second): // Wait up to 10 seconds for a message
+		t.Fatal("timeout waiting for staking event")
+	}
+
+	var stakingEv client.ActiveStakingEvent
+	err = json.Unmarshal([]byte(receivedEv.Body), &stakingEv)
+	require.NoError(t, err)
+	require.Equal(t, ev, &stakingEv)
+	require.Equal(t, int32(0), receivedEv.RetryAttempts)
+
+	// Now let's requeue the event
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	err = queueManager.StakingQueue.ReQueueMessage(ctx, receivedEv)
+	require.NoError(t, err)
+	time.Sleep(1 * time.Second) // Wait to ensure message has time to move to delayed queue
+
+	// Check that the main queue is empty
+	count, err := inspectQueueMessageCount(t, testServer.Conn, client.ActiveStakingQueueName)
+	require.NoError(t, err)
+	require.Equal(t, 0, count)
+
+	// Make sure it appears in the delayed queue
+	delayedQueueCount, err := inspectQueueMessageCount(t, testServer.Conn, client.ActiveStakingQueueName+"_delay")
+	require.NoError(t, err)
+	require.Equal(t, 1, delayedQueueCount)
+
+	// Checking delayed queue message appearance
+	select {
+	case requeuedEvent := <-stakingEventReceivedChan:
+		require.Nil(t, requeuedEvent, "Event should not be available immediately in the main queue")
+	case <-time.After(3 * time.Second): // Wait longer than the delay to ensure the message moves back
+	}
+
+	// Now let's wait for the requeued event
+	time.Sleep(2 * time.Second) // Wait additional time for delayed message to return
+	requeuedEvent := <-stakingEventReceivedChan
+	require.NotNil(t, requeuedEvent)
+	require.Equal(t, int32(1), requeuedEvent.RetryAttempts)
 }
