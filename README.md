@@ -42,7 +42,7 @@ const (
 
 ### Delayed Queues
 
-For each queue that are created, we also auto-provision a corresponding delayed queue
+For each queue that are created, we also auto-provision a corresponding delayed queue.
 The name of the delayed queue is in the form of `{{queueName}}` + `_delay`
 
 - **Purpose**: Delayed queues hold messages for a predetermined time before 

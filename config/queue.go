@@ -9,7 +9,7 @@ const (
 	defaultQueueUser                = "user"
 	defaultQueuePassword            = "password"
 	defaultQueueUrl                 = "localhost:5672"
-	defaultQueueProcessingTimeout   = 5 * time.Second
+	defaultQueueProcessingTimeout   = 5
 	defaultQueueMsgMaxRetryAttempts = 10
 	defaultReQueueDelayTime         = 5
 )
@@ -20,7 +20,7 @@ type QueueConfig struct {
 	Url                    string        `mapstructure:"url"`
 	QueueProcessingTimeout time.Duration `mapstructure:"processing_timeout"`
 	MsgMaxRetryAttempts    int32         `mapstructure:"msg_max_retry_attempts"`
-	ReQueueDelayTime       int           `mapstructure:"requeue_delay_time"`
+	ReQueueDelayTime       time.Duration `mapstructure:"requeue_delay_time"`
 }
 
 func (cfg *QueueConfig) Validate() error {

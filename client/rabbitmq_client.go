@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/babylonchain/staking-queue-client/config"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -20,7 +21,7 @@ type RabbitMqClient struct {
 	channel            *amqp.Channel
 	queueName          string
 	stopCh             chan struct{} // This is used to gracefully stop the message receiving loop
-	delayedRequeueTime int
+	delayedRequeueTime time.Duration
 }
 
 func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqClient, error) {
@@ -95,7 +96,7 @@ func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqC
 		channel:            ch,
 		queueName:          queueName,
 		stopCh:             make(chan struct{}),
-		delayedRequeueTime: config.ReQueueDelayTime,
+		delayedRequeueTime: time.Duration(config.ReQueueDelayTime) * time.Second,
 	}, nil
 }
 
@@ -171,7 +172,7 @@ func (c *RabbitMqClient) ReQueueMessage(ctx context.Context, message QueueMessag
 }
 
 // SendMessage sends a message to the queue. the ctx is used to control the timeout of the operation.
-func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBody, queueName string, attempts int32, ttl int) error {
+func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBody, queueName string, attempts int32, ttl time.Duration) error {
 	// Ensure the channel is open
 	if c.channel == nil {
 		return fmt.Errorf("RabbitMQ channel not initialized")
@@ -194,7 +195,7 @@ func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBod
 			ContentType:  "text/plain",
 			Body:         []byte(messageBody),
 			Headers:      newHeaders,
-			Expiration:   strconv.Itoa(ttl * 1000),
+			Expiration:   strconv.Itoa(int(ttl.Milliseconds())),
 		},
 	)
 
