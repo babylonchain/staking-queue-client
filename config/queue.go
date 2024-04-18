@@ -15,12 +15,16 @@ const (
 )
 
 type QueueConfig struct {
-	QueueUser              string        `mapstructure:"queue_user"`
-	QueuePassword          string        `mapstructure:"queue_password"`
-	Url                    string        `mapstructure:"url"`
+	QueueUser     string `mapstructure:"queue_user"`
+	QueuePassword string `mapstructure:"queue_password"`
+	Url           string `mapstructure:"url"`
+	// QueueProcessingTimeout is the maximum time a message will be processed in the application
 	QueueProcessingTimeout time.Duration `mapstructure:"processing_timeout"`
-	MsgMaxRetryAttempts    int32         `mapstructure:"msg_max_retry_attempts"`
-	ReQueueDelayTime       time.Duration `mapstructure:"requeue_delay_time"`
+	// MsgMaxRetryAttempts is the maximum number of times a message will be retried
+	MsgMaxRetryAttempts int32 `mapstructure:"msg_max_retry_attempts"`
+	// ReQueueDelayTime is the time a message will be hold in delay queue before
+	// sent to main queue again
+	ReQueueDelayTime time.Duration `mapstructure:"requeue_delay_time"`
 }
 
 func (cfg *QueueConfig) Validate() error {
