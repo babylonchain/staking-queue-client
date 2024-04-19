@@ -1,8 +1,6 @@
 package tests
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -57,21 +55,6 @@ func purgeQueues(conn *amqp091.Connection, queues []string) error {
 	return nil
 }
 
-func sendTestMessage[T any](client client.QueueClient, data []T) error {
-	for _, d := range data {
-		jsonBytes, err := json.Marshal(d)
-		if err != nil {
-			return err
-		}
-		messageBody := string(jsonBytes)
-		err = client.SendMessage(context.TODO(), messageBody)
-		if err != nil {
-			return fmt.Errorf("failed to publish a message to queue %s: %w", client.GetQueueName(), err)
-		}
-	}
-	return nil
-}
-
 func buildActiveNStakingEvents(stakerHash string, numOfEvent int) []*client.ActiveStakingEvent {
 	var activeStakingEvents []*client.ActiveStakingEvent
 	for i := 0; i < numOfEvent; i++ {
@@ -92,7 +75,7 @@ func buildActiveNStakingEvents(stakerHash string, numOfEvent int) []*client.Acti
 	return activeStakingEvents
 }
 
-func buildNUnbondingEvents(stakerHash string, numOfEvent int) []*client.UnbondingStakingEvent {
+func buildNUnbondingEvents(numOfEvent int) []*client.UnbondingStakingEvent {
 	var unbondingEvents []*client.UnbondingStakingEvent
 	for i := 0; i < numOfEvent; i++ {
 		unbondingEv := &client.UnbondingStakingEvent{

@@ -20,7 +20,10 @@ func TestStakingEvent(t *testing.T) {
 	queueCfg := config.DefaultQueueConfig()
 
 	queueManager := setupTestQueueConsumer(t, queueCfg)
-	defer queueManager.Stop()
+	defer func() {
+		err := queueManager.Stop()
+		require.NoError(t, err)
+	}()
 
 	stakingEventReceivedChan, err := queueManager.StakingQueue.ReceiveMessages()
 	require.NoError(t, err)
@@ -39,11 +42,14 @@ func TestStakingEvent(t *testing.T) {
 
 func TestUnbondingEvent(t *testing.T) {
 	numUnbondingEvents := 3
-	unbondingEvents := buildNUnbondingEvents(mockStakerHash, numUnbondingEvents)
+	unbondingEvents := buildNUnbondingEvents(numUnbondingEvents)
 	queueCfg := config.DefaultQueueConfig()
 
 	queueManager := setupTestQueueConsumer(t, queueCfg)
-	defer queueManager.Stop()
+	defer func() {
+		err := queueManager.Stop()
+		require.NoError(t, err)
+	}()
 
 	unbondingEvReceivedChan, err := queueManager.UnbondingQueue.ReceiveMessages()
 	require.NoError(t, err)
@@ -66,7 +72,10 @@ func TestWithdrawEvent(t *testing.T) {
 	queueCfg := config.DefaultQueueConfig()
 
 	queueManager := setupTestQueueConsumer(t, queueCfg)
-	defer queueManager.Stop()
+	defer func() {
+		err := queueManager.Stop()
+		require.NoError(t, err)
+	}()
 
 	withdrawEventsReceivedChan, err := queueManager.WithdrawQueue.ReceiveMessages()
 	require.NoError(t, err)
@@ -89,7 +98,10 @@ func TestExpiryEvent(t *testing.T) {
 	queueCfg := config.DefaultQueueConfig()
 
 	queueManager := setupTestQueueConsumer(t, queueCfg)
-	defer queueManager.Stop()
+	defer func() {
+		err := queueManager.Stop()
+		require.NoError(t, err)
+	}()
 
 	expiryEventsReceivedChan, err := queueManager.ExpiryQueue.ReceiveMessages()
 	require.NoError(t, err)
