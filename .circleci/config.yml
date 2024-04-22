@@ -31,3 +31,8 @@ jobs:
           name: Run tests
           command: |
             make tests
+
+workflows:
+  CI:
+    jobs:
+      - build_lint_test
