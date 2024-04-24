@@ -2,8 +2,6 @@ module github.com/babylonchain/staking-queue-client
 
 go 1.21.6
 
-toolchain go1.22.0
-
 require (
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/stretchr/testify v1.9.0

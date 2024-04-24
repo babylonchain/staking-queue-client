@@ -15,14 +15,33 @@ import (
 	"github.com/babylonchain/staking-queue-client/queuemngr"
 )
 
-func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *queuemngr.QueueManager {
+type TestServer struct {
+	QueueManager *queuemngr.QueueManager
+	Conn         *amqp091.Connection
+}
+
+func (ts *TestServer) Stop(t *testing.T) {
+	err := ts.QueueManager.Stop()
+	require.NoError(t, err)
+	err = ts.Conn.Close()
+	require.NoError(t, err)
+
+}
+
+func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *TestServer {
 	amqpURI := fmt.Sprintf("amqp://%s:%s@%s", cfg.QueueUser, cfg.QueuePassword, cfg.Url)
 	conn, err := amqp091.Dial(amqpURI)
 	require.NoError(t, err)
-	defer conn.Close()
 	err = purgeQueues(conn, []string{
 		client.ActiveStakingQueueName,
-		// TODO currently other queues not exist
+		client.UnbondingStakingQueueName,
+		client.WithdrawStakingQueueName,
+		client.ExpiredStakingQueueName,
+		// purge delay queues too
+		client.ActiveStakingQueueName + "_delay",
+		client.UnbondingStakingQueueName + "_delay",
+		client.WithdrawStakingQueueName + "_delay",
+		client.ExpiredStakingQueueName + "_delay",
 	})
 	require.NoError(t, err)
 
@@ -30,7 +49,10 @@ func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *queuemngr.Qu
 	queues, err := queuemngr.NewQueueManager(cfg, zap.NewNop())
 	require.NoError(t, err)
 
-	return queues
+	return &TestServer{
+		QueueManager: queues,
+		Conn:         conn,
+	}
 }
 
 // purgeQueues purges all messages from the given list of queues.
@@ -44,9 +66,8 @@ func purgeQueues(conn *amqp091.Connection, queues []string) error {
 	for _, queue := range queues {
 		_, err := ch.QueuePurge(queue, false)
 		if err != nil {
-			if strings.Contains(err.Error(), "no queue") {
-				fmt.Printf("Queue '%s' not found, ignoring...\n", queue)
-				continue // Ignore this error and proceed with the next queue
+			if strings.Contains(err.Error(), "NOT_FOUND") || strings.Contains(err.Error(), "channel/connection is not open") {
+				continue
 			}
 			return fmt.Errorf("failed to purge queue in test %s: %w", queue, err)
 		}
@@ -119,4 +140,21 @@ func buildNExpiryEvents(numOfEvent int) []*client.ExpiredStakingEvent {
 	}
 
 	return expiryEvents
+}
+
+// inspectQueueMessageCount inspects the number of messages in the given queue.
+func inspectQueueMessageCount(t *testing.T, conn *amqp091.Connection, queueName string) (int, error) {
+	ch, err := conn.Channel()
+	if err != nil {
+		t.Fatalf("failed to open a channel in test: %v", err)
+	}
+
+	q, err := ch.QueueDeclarePassive(queueName, false, false, false, false, nil)
+	if err != nil {
+		if strings.Contains(err.Error(), "NOT_FOUND") || strings.Contains(err.Error(), "channel/connection is not open") {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("failed to inspect queue in test %s: %w", queueName, err)
+	}
+	return q.Messages, nil
 }

@@ -1,6 +1,10 @@
 package client
 
-import "context"
+import (
+	"context"
+
+	"github.com/babylonchain/staking-queue-client/config"
+)
 
 type QueueMessage struct {
 	Body          string
@@ -27,6 +31,6 @@ type QueueClient interface {
 	ReQueueMessage(ctx context.Context, message QueueMessage) error
 }
 
-func NewQueueClient(queueURL, user, pass, queueName string) (QueueClient, error) {
-	return NewRabbitMqClient(queueURL, user, pass, queueName)
+func NewQueueClient(config *config.QueueConfig, queueName string) (QueueClient, error) {
+	return NewRabbitMqClient(config, queueName)
 }
