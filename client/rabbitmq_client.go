@@ -183,6 +183,18 @@ func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBod
 		"x-processing-attempts": attempts,
 	}
 
+	publishMsg := amqp.Publishing{
+		DeliveryMode: amqp.Persistent,
+		ContentType:  "text/plain",
+		Body:         []byte(messageBody),
+		Headers:      newHeaders,
+	}
+
+	// Exclude the expiration if the TTL is 0.
+	if ttl > 0 {
+		publishMsg.Expiration = strconv.Itoa(int(ttl.Milliseconds()))
+	}
+
 	// Publish a message to the queue
 	confirmation, err := c.channel.PublishWithDeferredConfirmWithContext(
 		ctx,
@@ -190,13 +202,7 @@ func (c *RabbitMqClient) sendMessageWithAttempts(ctx context.Context, messageBod
 		queueName, // routing key: The queue this message should be routed to
 		true,      // mandatory: true indicates the server must route the message to a queue, otherwise error
 		false,     // immediate: false indicates the server may wait to send the message until a consumer is available
-		amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
-			ContentType:  "text/plain",
-			Body:         []byte(messageBody),
-			Headers:      newHeaders,
-			Expiration:   strconv.Itoa(int(ttl.Milliseconds())),
-		},
+		publishMsg,
 	)
 
 	if err != nil {
