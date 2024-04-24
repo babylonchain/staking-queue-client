@@ -148,7 +148,8 @@ func inspectQueueMessageCount(t *testing.T, conn *amqp091.Connection, queueName 
 	if err != nil {
 		t.Fatalf("failed to open a channel in test: %v", err)
 	}
-	q, err := ch.QueueInspect(queueName)
+
+	q, err := ch.QueueDeclarePassive(queueName, false, false, false, false, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "NOT_FOUND") || strings.Contains(err.Error(), "channel/connection is not open") {
 			return 0, nil

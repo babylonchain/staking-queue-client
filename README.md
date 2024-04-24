@@ -1,6 +1,6 @@
 # staking-queue-client
 
-We focus on using rabbitMQ for message processing in Babylon today.
+This document focuses on the usage of RabbitMQ for message processing in the Babylon system.
 
 ## Overview
 
@@ -42,7 +42,8 @@ const (
 
 ### Delayed Queues
 
-For each queue that are created, we also auto-provision a corresponding delayed queue.
+For each queue that is created, we also auto-provision a corresponding delayed queue.  
+
 The name of the delayed queue is in the form of `{{queueName}}` + `_delay`
 
 - **Purpose**: Delayed queues hold messages for a predetermined time before 
@@ -54,7 +55,7 @@ which routes messages based on the queue name.
 
 ## Re-queueing Messages
 
-Re-queueing of messages occurs when our application is temporarily unable to process 
+Re-queueing of messages occurs when the application is temporarily unable to process  
 them for any reason. To manage this effectively, we have implemented a custom 
 solution that delays the re-queueing of messages. 
 This delay ensures that the service can process these messages correctly when it returns to a suitable state.
