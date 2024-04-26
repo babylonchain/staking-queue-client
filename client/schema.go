@@ -5,6 +5,7 @@ const (
 	UnbondingStakingQueueName string = "unbonding_staking_queue"
 	WithdrawStakingQueueName  string = "withdraw_staking_queue"
 	ExpiredStakingQueueName   string = "expired_staking_queue"
+	StakingStatsQueueName     string = "staking_stats_queue"
 )
 
 const (
@@ -12,6 +13,7 @@ const (
 	UnbondingStakingEventType EventType = 2
 	WithdrawStakingEventType  EventType = 3
 	ExpiredStakingEventType   EventType = 4
+	StatsEventType            EventType = 5
 )
 
 type EventType int
@@ -146,5 +148,39 @@ func NewExpiredStakingEvent(stakingTxHashHex string, txType string) ExpiredStaki
 		EventType:        ExpiredStakingEventType,
 		StakingTxHashHex: stakingTxHashHex,
 		TxType:           txType,
+	}
+}
+
+type StatsEvent struct {
+	EventType             EventType `json:"event_type"` // always 5. StatsEventType
+	StakingTxHashHex      string    `json:"staking_tx_hash_hex"`
+	StakerPkHex           string    `json:"staker_pk_hex"`
+	FinalityProviderPkHex string    `json:"finality_provider_pk_hex"`
+	StakingValue          uint64    `json:"staking_value"`
+	State                 string    `json:"state"`
+}
+
+func (e StatsEvent) GetEventType() EventType {
+	return StatsEventType
+}
+
+func (e StatsEvent) GetStakingTxHashHex() string {
+	return e.StakingTxHashHex
+}
+
+func NewStatsEvent(
+	stakingTxHashHex string,
+	stakerPkHex string,
+	finalityProviderPkHex string,
+	stakingValue uint64,
+	state string,
+) StatsEvent {
+	return StatsEvent{
+		EventType:             StatsEventType,
+		StakingTxHashHex:      stakingTxHashHex,
+		StakerPkHex:           stakerPkHex,
+		FinalityProviderPkHex: finalityProviderPkHex,
+		StakingValue:          stakingValue,
+		State:                 state,
 	}
 }
