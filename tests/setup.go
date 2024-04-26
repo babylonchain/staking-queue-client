@@ -37,11 +37,13 @@ func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *TestServer {
 		client.UnbondingStakingQueueName,
 		client.WithdrawStakingQueueName,
 		client.ExpiredStakingQueueName,
+		client.StakingStatsQueueName,
 		// purge delay queues too
 		client.ActiveStakingQueueName + "_delay",
 		client.UnbondingStakingQueueName + "_delay",
 		client.WithdrawStakingQueueName + "_delay",
 		client.ExpiredStakingQueueName + "_delay",
+		client.StakingStatsQueueName + "_delay",
 	})
 	require.NoError(t, err)
 
