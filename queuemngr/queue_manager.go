@@ -16,6 +16,7 @@ type QueueManager struct {
 	UnbondingQueue client.QueueClient
 	WithdrawQueue  client.QueueClient
 	ExpiryQueue    client.QueueClient
+	StatsQueue     client.QueueClient
 	logger         *zap.Logger
 }
 
@@ -40,11 +41,17 @@ func NewQueueManager(cfg *config.QueueConfig, logger *zap.Logger) (*QueueManager
 		return nil, fmt.Errorf("failed to create withdraw queue: %w", err)
 	}
 
+	statsQueue, err := client.NewQueueClient(cfg, client.StakingStatsQueueName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stats queue: %w", err)
+	}
+
 	return &QueueManager{
 		StakingQueue:   stakingQueue,
 		UnbondingQueue: unbondingQueue,
 		WithdrawQueue:  withdrawQueue,
 		ExpiryQueue:    expiryQueue,
+		StatsQueue:     statsQueue,
 		logger:         logger.With(zap.String("module", "queue consumer")),
 	}, nil
 }
@@ -132,6 +139,8 @@ func (qc *QueueManager) ReQueueMessage(ctx context.Context, message client.Queue
 		return qc.WithdrawQueue.ReQueueMessage(ctx, message)
 	case client.ExpiredStakingQueueName:
 		return qc.ExpiryQueue.ReQueueMessage(ctx, message)
+	case client.StakingStatsQueueName:
+		return qc.StatsQueue.ReQueueMessage(ctx, message)
 	default:
 		return fmt.Errorf("unknown queue name: %s", queueName)
 	}
@@ -151,6 +160,10 @@ func (qc *QueueManager) Stop() error {
 	}
 
 	if err := qc.ExpiryQueue.Stop(); err != nil {
+		return err
+	}
+
+	if err := qc.StatsQueue.Stop(); err != nil {
 		return err
 	}
 
