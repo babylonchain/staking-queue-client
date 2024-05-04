@@ -34,6 +34,7 @@ type ActiveStakingEvent struct {
 	StakingTimeLock       uint64    `json:"staking_timelock"`
 	StakingOutputIndex    uint64    `json:"staking_output_index"`
 	StakingTxHex          string    `json:"staking_tx_hex"`
+	IsOverflow            bool      `json:"is_overflow"`
 }
 
 func (e ActiveStakingEvent) GetEventType() EventType {
@@ -54,6 +55,7 @@ func NewActiveStakingEvent(
 	stakingTimeLock uint64,
 	stakingOutputIndex uint64,
 	stakingTxHex string,
+	isOverflow bool,
 ) ActiveStakingEvent {
 	return ActiveStakingEvent{
 		EventType:             ActiveStakingEventType,
@@ -66,6 +68,7 @@ func NewActiveStakingEvent(
 		StakingTimeLock:       stakingTimeLock,
 		StakingOutputIndex:    stakingOutputIndex,
 		StakingTxHex:          stakingTxHex,
+		IsOverflow:            isOverflow,
 	}
 }
 
