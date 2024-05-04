@@ -86,7 +86,7 @@ func buildActiveNStakingEvents(stakerHash string, numOfEvent int) []*client.Acti
 			StakingTxHashHex:      "0x1234567890abcdef" + fmt.Sprint(i),
 			StakerPkHex:           stakerHash,
 			FinalityProviderPkHex: "0xabcdef1234567890" + fmt.Sprint(i),
-			StakingValue:          1 + uint64(i),
+			StakingValue:          1 + int64(i),
 			StakingStartHeight:    100 + uint64(i),
 			StakingStartTimestamp: time.Now().Unix(),
 			StakingTimeLock:       200 + uint64(i),

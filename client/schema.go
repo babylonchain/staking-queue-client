@@ -28,7 +28,7 @@ type ActiveStakingEvent struct {
 	StakingTxHashHex      string    `json:"staking_tx_hash_hex"`
 	StakerPkHex           string    `json:"staker_pk_hex"`
 	FinalityProviderPkHex string    `json:"finality_provider_pk_hex"`
-	StakingValue          uint64    `json:"staking_value"`
+	StakingValue          int64     `json:"staking_value"`
 	StakingStartHeight    uint64    `json:"staking_start_height"`
 	StakingStartTimestamp int64     `json:"staking_start_timestamp"`
 	StakingTimeLock       uint64    `json:"staking_timelock"`
@@ -49,7 +49,7 @@ func NewActiveStakingEvent(
 	stakingTxHashHex string,
 	stakerPkHex string,
 	finalityProviderPkHex string,
-	stakingValue uint64,
+	stakingValue int64,
 	stakingStartHeight uint64,
 	stakingStartTimestamp int64,
 	stakingTimeLock uint64,
@@ -159,7 +159,7 @@ type StatsEvent struct {
 	StakingTxHashHex      string    `json:"staking_tx_hash_hex"`
 	StakerPkHex           string    `json:"staker_pk_hex"`
 	FinalityProviderPkHex string    `json:"finality_provider_pk_hex"`
-	StakingValue          uint64    `json:"staking_value"`
+	StakingValue          int64     `json:"staking_value"`
 	State                 string    `json:"state"`
 }
 
@@ -175,7 +175,7 @@ func NewStatsEvent(
 	stakingTxHashHex string,
 	stakerPkHex string,
 	finalityProviderPkHex string,
-	stakingValue uint64,
+	stakingValue int64,
 	state string,
 ) StatsEvent {
 	return StatsEvent{
