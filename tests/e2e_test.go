@@ -116,6 +116,31 @@ func TestExpiryEvent(t *testing.T) {
 	}
 }
 
+func TestUnconfirmedTvlEvent(t *testing.T) {
+	numUnconfirmedTVLEvents := 3
+	unconfirmedTvlEvents := buildNUnconfirmedTVLEvents(numUnconfirmedTVLEvents)
+	queueCfg := config.DefaultQueueConfig()
+
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
+
+	unconfirmedTvlEventsReceivedChan, err := queueManager.UnconfirmedTVLQueue.ReceiveMessages()
+	require.NoError(t, err)
+
+	for _, ev := range unconfirmedTvlEvents {
+		err = queueManager.PushUnconfirmedTVLEvent(ev)
+		require.NoError(t, err)
+
+		receivedEv := <-unconfirmedTvlEventsReceivedChan
+		var unconfirmedTvlEvent client.UnconfirmedTVLEvent
+		err := json.Unmarshal([]byte(receivedEv.Body), &unconfirmedTvlEvent)
+		require.NoError(t, err)
+		require.Equal(t, ev, &unconfirmedTvlEvent)
+	}
+}
+
 func TestReQueueEvent(t *testing.T) {
 	activeStakingEvents := buildActiveNStakingEvents(mockStakerHash, 1)
 	queueCfg := config.DefaultQueueConfig()

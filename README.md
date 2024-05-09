@@ -23,7 +23,7 @@ that need to be retried after a specific delay.
 ### Main Queues
 
 Main queues are created by initiating the `NewQueueClient`.
-For example, in the Babylon mainnet phase 1, we have following queues:
+For example, in the Babylon mainnet phase 1, we have the following queues:
 
 ```go
 const (
@@ -31,6 +31,8 @@ const (
 	UnbondingStakingQueueName string = "unbonding_staking_queue"
 	WithdrawStakingQueueName  string = "withdraw_staking_queue"
 	ExpiredStakingQueueName   string = "expired_staking_queue"
+    StakingStatsQueueName     string = "staking_stats_queue"
+    UnconfirmedTVLQueueName   string = "unconfirmed_tvl_queue"
 )
 ```
 
