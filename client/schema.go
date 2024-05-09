@@ -6,6 +6,7 @@ const (
 	WithdrawStakingQueueName  string = "withdraw_staking_queue"
 	ExpiredStakingQueueName   string = "expired_staking_queue"
 	StakingStatsQueueName     string = "staking_stats_queue"
+	UnconfirmedInfoQueueName  string = "unconfirmed_info_queue"
 )
 
 const (
@@ -14,6 +15,7 @@ const (
 	WithdrawStakingEventType  EventType = 3
 	ExpiredStakingEventType   EventType = 4
 	StatsEventType            EventType = 5
+	UnconfirmedInfoEventType  EventType = 6
 )
 
 type EventType int
@@ -185,5 +187,28 @@ func NewStatsEvent(
 		FinalityProviderPkHex: finalityProviderPkHex,
 		StakingValue:          stakingValue,
 		State:                 state,
+	}
+}
+
+type UnconfirmedInfoEvent struct {
+	EventType EventType `json:"event_type"` // always 6. UnconfirmedInfoEventType
+	Height    uint64    `json:"height"`
+	ActiveTvl uint64    `json:"active_tvl"`
+}
+
+func (e UnconfirmedInfoEvent) GetEventType() EventType {
+	return UnconfirmedInfoEventType
+}
+
+// Not applicable, add it here to implement the EventMessage interface
+func (e UnconfirmedInfoEvent) GetStakingTxHashHex() string {
+	return ""
+}
+
+func NewUnconfirmedInfoEvent(height, tvl uint64) UnconfirmedInfoEvent {
+	return UnconfirmedInfoEvent{
+		EventType: UnconfirmedInfoEventType,
+		Height:    height,
+		ActiveTvl: tvl,
 	}
 }

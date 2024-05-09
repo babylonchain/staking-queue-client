@@ -38,12 +38,14 @@ func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *TestServer {
 		client.WithdrawStakingQueueName,
 		client.ExpiredStakingQueueName,
 		client.StakingStatsQueueName,
+		client.UnconfirmedInfoQueueName,
 		// purge delay queues too
 		client.ActiveStakingQueueName + "_delay",
 		client.UnbondingStakingQueueName + "_delay",
 		client.WithdrawStakingQueueName + "_delay",
 		client.ExpiredStakingQueueName + "_delay",
 		client.StakingStatsQueueName + "_delay",
+		client.UnconfirmedInfoQueueName + "_delay",
 	})
 	require.NoError(t, err)
 
@@ -81,19 +83,20 @@ func purgeQueues(conn *amqp091.Connection, queues []string) error {
 func buildActiveNStakingEvents(stakerHash string, numOfEvent int) []*client.ActiveStakingEvent {
 	var activeStakingEvents []*client.ActiveStakingEvent
 	for i := 0; i < numOfEvent; i++ {
-		activeStakingEvent := &client.ActiveStakingEvent{
-			EventType:             client.ActiveStakingEventType,
-			StakingTxHashHex:      "0x1234567890abcdef" + fmt.Sprint(i),
-			StakerPkHex:           stakerHash,
-			FinalityProviderPkHex: "0xabcdef1234567890" + fmt.Sprint(i),
-			StakingValue:          1 + uint64(i),
-			StakingStartHeight:    100 + uint64(i),
-			StakingStartTimestamp: time.Now().Unix(),
-			StakingTimeLock:       200 + uint64(i),
-			StakingOutputIndex:    1 + uint64(i),
-			StakingTxHex:          "0xabcdef1234567890" + fmt.Sprint(i),
-		}
-		activeStakingEvents = append(activeStakingEvents, activeStakingEvent)
+		activeStakingEvent := client.NewActiveStakingEvent(
+			"0x1234567890abcdef"+fmt.Sprint(i),
+			stakerHash,
+			"0xabcdef1234567890"+fmt.Sprint(i),
+			1+uint64(i),
+			100+uint64(i),
+			time.Now().Unix(),
+			200+uint64(i),
+			1+uint64(i),
+			"0xabcdef1234567890"+fmt.Sprint(i),
+			false,
+		)
+
+		activeStakingEvents = append(activeStakingEvents, &activeStakingEvent)
 	}
 	return activeStakingEvents
 }
@@ -101,17 +104,16 @@ func buildActiveNStakingEvents(stakerHash string, numOfEvent int) []*client.Acti
 func buildNUnbondingEvents(numOfEvent int) []*client.UnbondingStakingEvent {
 	var unbondingEvents []*client.UnbondingStakingEvent
 	for i := 0; i < numOfEvent; i++ {
-		unbondingEv := &client.UnbondingStakingEvent{
-			EventType:               client.UnbondingStakingEventType,
-			StakingTxHashHex:        "0x1234567890abcdef" + fmt.Sprint(i),
-			UnbondingStartHeight:    uint64(i),
-			UnbondingStartTimestamp: time.Now().Unix(),
-			UnbondingTimeLock:       200 + uint64(i),
-			UnbondingOutputIndex:    uint64(0),
-			UnbondingTxHex:          "0xabcdef1234567890" + fmt.Sprint(i),
-			UnbondingTxHashHex:      "0x1234567890abcdef" + fmt.Sprint(i),
-		}
-		unbondingEvents = append(unbondingEvents, unbondingEv)
+		unbondingEv := client.NewUnbondingStakingEvent(
+			"0x1234567890abcdef"+fmt.Sprint(i),
+			uint64(i),
+			time.Now().Unix(),
+			200+uint64(i),
+			uint64(0),
+			"0xabcdef1234567890"+fmt.Sprint(i),
+			"0x1234567890abcdef"+fmt.Sprint(i),
+		)
+		unbondingEvents = append(unbondingEvents, &unbondingEv)
 	}
 
 	return unbondingEvents
@@ -120,11 +122,10 @@ func buildNUnbondingEvents(numOfEvent int) []*client.UnbondingStakingEvent {
 func buildNWithdrawEvents(numOfEvent int) []*client.WithdrawStakingEvent {
 	var withdrawEvents []*client.WithdrawStakingEvent
 	for i := 0; i < numOfEvent; i++ {
-		withdrawEv := &client.WithdrawStakingEvent{
-			EventType:        client.WithdrawStakingEventType,
-			StakingTxHashHex: "0x1234567890abcdef" + fmt.Sprint(i),
-		}
-		withdrawEvents = append(withdrawEvents, withdrawEv)
+		withdrawEv := client.NewWithdrawStakingEvent(
+			"0x1234567890abcdef" + fmt.Sprint(i),
+		)
+		withdrawEvents = append(withdrawEvents, &withdrawEv)
 	}
 
 	return withdrawEvents
@@ -133,15 +134,29 @@ func buildNWithdrawEvents(numOfEvent int) []*client.WithdrawStakingEvent {
 func buildNExpiryEvents(numOfEvent int) []*client.ExpiredStakingEvent {
 	var expiryEvents []*client.ExpiredStakingEvent
 	for i := 0; i < numOfEvent; i++ {
-		expiryEv := &client.ExpiredStakingEvent{
-			EventType:        client.ExpiredStakingEventType,
-			StakingTxHashHex: "0x1234567890abcdef" + fmt.Sprint(i),
-			TxType:           "active",
-		}
-		expiryEvents = append(expiryEvents, expiryEv)
+		expiryEv := client.NewExpiredStakingEvent(
+			"0x1234567890abcdef"+fmt.Sprint(i),
+			"active",
+		)
+
+		expiryEvents = append(expiryEvents, &expiryEv)
 	}
 
 	return expiryEvents
+}
+
+func buildNUnconfirmedInfoEvents(numOfEvent int) []*client.UnconfirmedInfoEvent {
+	var unconfirmedInfoEvents []*client.UnconfirmedInfoEvent
+	for i := 0; i < numOfEvent; i++ {
+		unconfirmedInfoEv := client.NewUnconfirmedInfoEvent(
+			100+uint64(i),
+			10000+uint64(i)*1000,
+		)
+
+		unconfirmedInfoEvents = append(unconfirmedInfoEvents, &unconfirmedInfoEv)
+	}
+
+	return unconfirmedInfoEvents
 }
 
 // inspectQueueMessageCount inspects the number of messages in the given queue.

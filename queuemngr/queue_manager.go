@@ -12,12 +12,13 @@ import (
 )
 
 type QueueManager struct {
-	StakingQueue   client.QueueClient
-	UnbondingQueue client.QueueClient
-	WithdrawQueue  client.QueueClient
-	ExpiryQueue    client.QueueClient
-	StatsQueue     client.QueueClient
-	logger         *zap.Logger
+	StakingQueue         client.QueueClient
+	UnbondingQueue       client.QueueClient
+	WithdrawQueue        client.QueueClient
+	ExpiryQueue          client.QueueClient
+	StatsQueue           client.QueueClient
+	UnconfirmedInfoQueue client.QueueClient
+	logger               *zap.Logger
 }
 
 func NewQueueManager(cfg *config.QueueConfig, logger *zap.Logger) (*QueueManager, error) {
@@ -46,13 +47,19 @@ func NewQueueManager(cfg *config.QueueConfig, logger *zap.Logger) (*QueueManager
 		return nil, fmt.Errorf("failed to create stats queue: %w", err)
 	}
 
+	unconfirmedInfoQueue, err := client.NewQueueClient(cfg, client.UnconfirmedInfoQueueName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create unconfirmed info queue: %w", err)
+	}
+
 	return &QueueManager{
-		StakingQueue:   stakingQueue,
-		UnbondingQueue: unbondingQueue,
-		WithdrawQueue:  withdrawQueue,
-		ExpiryQueue:    expiryQueue,
-		StatsQueue:     statsQueue,
-		logger:         logger.With(zap.String("module", "queue consumer")),
+		StakingQueue:         stakingQueue,
+		UnbondingQueue:       unbondingQueue,
+		WithdrawQueue:        withdrawQueue,
+		ExpiryQueue:          expiryQueue,
+		StatsQueue:           statsQueue,
+		UnconfirmedInfoQueue: unconfirmedInfoQueue,
+		logger:               logger.With(zap.String("module", "queue consumer")),
 	}, nil
 }
 
@@ -128,6 +135,23 @@ func (qc *QueueManager) PushExpiryEvent(ev *client.ExpiredStakingEvent) error {
 	return nil
 }
 
+func (qc *QueueManager) PushUnconfirmedInfoEvent(ev *client.UnconfirmedInfoEvent) error {
+	jsonBytes, err := json.Marshal(ev)
+	if err != nil {
+		return err
+	}
+	messageBody := string(jsonBytes)
+
+	qc.logger.Info("pushing unconfirmed info event", zap.Uint64("height", ev.Height))
+	err = qc.UnconfirmedInfoQueue.SendMessage(context.TODO(), messageBody)
+	if err != nil {
+		return fmt.Errorf("failed to push unconfirmed info event: %w", err)
+	}
+	qc.logger.Info("successfully pushed confirmed info event", zap.Uint64("height", ev.Height))
+
+	return nil
+}
+
 // requeue message
 func (qc *QueueManager) ReQueueMessage(ctx context.Context, message client.QueueMessage, queueName string) error {
 	switch queueName {
@@ -141,6 +165,8 @@ func (qc *QueueManager) ReQueueMessage(ctx context.Context, message client.Queue
 		return qc.ExpiryQueue.ReQueueMessage(ctx, message)
 	case client.StakingStatsQueueName:
 		return qc.StatsQueue.ReQueueMessage(ctx, message)
+	case client.UnconfirmedInfoQueueName:
+		return qc.UnconfirmedInfoQueue.ReQueueMessage(ctx, message)
 	default:
 		return fmt.Errorf("unknown queue name: %s", queueName)
 	}
@@ -164,6 +190,10 @@ func (qc *QueueManager) Stop() error {
 	}
 
 	if err := qc.StatsQueue.Stop(); err != nil {
+		return err
+	}
+
+	if err := qc.UnconfirmedInfoQueue.Stop(); err != nil {
 		return err
 	}
 

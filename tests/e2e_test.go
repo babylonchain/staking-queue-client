@@ -116,6 +116,31 @@ func TestExpiryEvent(t *testing.T) {
 	}
 }
 
+func TestUnconfirmedInfoEvent(t *testing.T) {
+	numUnconfirmedInfoEvents := 3
+	unconfirmedInfoEvents := buildNUnconfirmedInfoEvents(numUnconfirmedInfoEvents)
+	queueCfg := config.DefaultQueueConfig()
+
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
+
+	unconfirmedInfoEventsReceivedChan, err := queueManager.UnconfirmedInfoQueue.ReceiveMessages()
+	require.NoError(t, err)
+
+	for _, ev := range unconfirmedInfoEvents {
+		err = queueManager.PushUnconfirmedInfoEvent(ev)
+		require.NoError(t, err)
+
+		receivedEv := <-unconfirmedInfoEventsReceivedChan
+		var unconfirmedInfoEvent client.UnconfirmedInfoEvent
+		err := json.Unmarshal([]byte(receivedEv.Body), &unconfirmedInfoEvent)
+		require.NoError(t, err)
+		require.Equal(t, ev, &unconfirmedInfoEvent)
+	}
+}
+
 func TestReQueueEvent(t *testing.T) {
 	activeStakingEvents := buildActiveNStakingEvents(mockStakerHash, 1)
 	queueCfg := config.DefaultQueueConfig()
