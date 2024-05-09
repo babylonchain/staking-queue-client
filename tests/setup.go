@@ -38,14 +38,14 @@ func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *TestServer {
 		client.WithdrawStakingQueueName,
 		client.ExpiredStakingQueueName,
 		client.StakingStatsQueueName,
-		client.UnconfirmedTVLQueueName,
+		client.UnconfirmedInfoQueueName,
 		// purge delay queues too
 		client.ActiveStakingQueueName + "_delay",
 		client.UnbondingStakingQueueName + "_delay",
 		client.WithdrawStakingQueueName + "_delay",
 		client.ExpiredStakingQueueName + "_delay",
 		client.StakingStatsQueueName + "_delay",
-		client.UnconfirmedTVLQueueName + "_delay",
+		client.UnconfirmedInfoQueueName + "_delay",
 	})
 	require.NoError(t, err)
 
@@ -145,18 +145,18 @@ func buildNExpiryEvents(numOfEvent int) []*client.ExpiredStakingEvent {
 	return expiryEvents
 }
 
-func buildNUnconfirmedTVLEvents(numOfEvent int) []*client.UnconfirmedTVLEvent {
-	var unconfirmedTvlEvents []*client.UnconfirmedTVLEvent
+func buildNUnconfirmedInfoEvents(numOfEvent int) []*client.UnconfirmedInfoEvent {
+	var unconfirmedInfoEvents []*client.UnconfirmedInfoEvent
 	for i := 0; i < numOfEvent; i++ {
-		unconfirmedTvlEv := client.NewUnconfirmedTvlEvent(
+		unconfirmedInfoEv := client.NewUnconfirmedInfoEvent(
 			100+uint64(i),
 			10000+uint64(i)*1000,
 		)
 
-		unconfirmedTvlEvents = append(unconfirmedTvlEvents, &unconfirmedTvlEv)
+		unconfirmedInfoEvents = append(unconfirmedInfoEvents, &unconfirmedInfoEv)
 	}
 
-	return unconfirmedTvlEvents
+	return unconfirmedInfoEvents
 }
 
 // inspectQueueMessageCount inspects the number of messages in the given queue.

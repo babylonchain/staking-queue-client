@@ -116,9 +116,9 @@ func TestExpiryEvent(t *testing.T) {
 	}
 }
 
-func TestUnconfirmedTvlEvent(t *testing.T) {
-	numUnconfirmedTVLEvents := 3
-	unconfirmedTvlEvents := buildNUnconfirmedTVLEvents(numUnconfirmedTVLEvents)
+func TestUnconfirmedInfoEvent(t *testing.T) {
+	numUnconfirmedInfoEvents := 3
+	unconfirmedInfoEvents := buildNUnconfirmedInfoEvents(numUnconfirmedInfoEvents)
 	queueCfg := config.DefaultQueueConfig()
 
 	testServer := setupTestQueueConsumer(t, queueCfg)
@@ -126,18 +126,18 @@ func TestUnconfirmedTvlEvent(t *testing.T) {
 
 	queueManager := testServer.QueueManager
 
-	unconfirmedTvlEventsReceivedChan, err := queueManager.UnconfirmedTVLQueue.ReceiveMessages()
+	unconfirmedInfoEventsReceivedChan, err := queueManager.UnconfirmedInfoQueue.ReceiveMessages()
 	require.NoError(t, err)
 
-	for _, ev := range unconfirmedTvlEvents {
-		err = queueManager.PushUnconfirmedTVLEvent(ev)
+	for _, ev := range unconfirmedInfoEvents {
+		err = queueManager.PushUnconfirmedInfoEvent(ev)
 		require.NoError(t, err)
 
-		receivedEv := <-unconfirmedTvlEventsReceivedChan
-		var unconfirmedTvlEvent client.UnconfirmedTVLEvent
-		err := json.Unmarshal([]byte(receivedEv.Body), &unconfirmedTvlEvent)
+		receivedEv := <-unconfirmedInfoEventsReceivedChan
+		var unconfirmedInfoEvent client.UnconfirmedInfoEvent
+		err := json.Unmarshal([]byte(receivedEv.Body), &unconfirmedInfoEvent)
 		require.NoError(t, err)
-		require.Equal(t, ev, &unconfirmedTvlEvent)
+		require.Equal(t, ev, &unconfirmedInfoEvent)
 	}
 }
 

@@ -6,7 +6,7 @@ const (
 	WithdrawStakingQueueName  string = "withdraw_staking_queue"
 	ExpiredStakingQueueName   string = "expired_staking_queue"
 	StakingStatsQueueName     string = "staking_stats_queue"
-	UnconfirmedTVLQueueName   string = "unconfirmed_tvl_queue"
+	UnconfirmedInfoQueueName  string = "unconfirmed_info_queue"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 	WithdrawStakingEventType  EventType = 3
 	ExpiredStakingEventType   EventType = 4
 	StatsEventType            EventType = 5
-	UnconfirmedTVLEventType   EventType = 6
+	UnconfirmedInfoEventType  EventType = 6
 )
 
 type EventType int
@@ -190,25 +190,25 @@ func NewStatsEvent(
 	}
 }
 
-type UnconfirmedTVLEvent struct {
-	EventType EventType `json:"event_type"` // always 6. UnconfirmedTVLEventType
+type UnconfirmedInfoEvent struct {
+	EventType EventType `json:"event_type"` // always 6. UnconfirmedInfoEventType
 	Height    uint64    `json:"height"`
-	Value     uint64    `json:"value"`
+	ActiveTvl uint64    `json:"active_tvl"`
 }
 
-func (e UnconfirmedTVLEvent) GetEventType() EventType {
-	return UnconfirmedTVLEventType
+func (e UnconfirmedInfoEvent) GetEventType() EventType {
+	return UnconfirmedInfoEventType
 }
 
 // Not applicable, add it here to implement the EventMessage interface
-func (e UnconfirmedTVLEvent) GetStakingTxHashHex() string {
+func (e UnconfirmedInfoEvent) GetStakingTxHashHex() string {
 	return ""
 }
 
-func NewUnconfirmedTvlEvent(height, value uint64) UnconfirmedTVLEvent {
-	return UnconfirmedTVLEvent{
-		EventType: UnconfirmedTVLEventType,
+func NewUnconfirmedInfoEvent(height, tvl uint64) UnconfirmedInfoEvent {
+	return UnconfirmedInfoEvent{
+		EventType: UnconfirmedInfoEventType,
 		Height:    height,
-		Value:     value,
+		ActiveTvl: tvl,
 	}
 }
