@@ -116,9 +116,9 @@ func TestExpiryEvent(t *testing.T) {
 	}
 }
 
-func TestUnconfirmedInfoEvent(t *testing.T) {
-	numUnconfirmedInfoEvents := 3
-	unconfirmedInfoEvents := buildNUnconfirmedInfoEvents(numUnconfirmedInfoEvents)
+func TestBtcInfoEvent(t *testing.T) {
+	numBtcInfoEvents := 3
+	BtcInfoEvents := buildNBtcInfoEvents(numBtcInfoEvents)
 	queueCfg := config.DefaultQueueConfig()
 
 	testServer := setupTestQueueConsumer(t, queueCfg)
@@ -126,18 +126,18 @@ func TestUnconfirmedInfoEvent(t *testing.T) {
 
 	queueManager := testServer.QueueManager
 
-	unconfirmedInfoEventsReceivedChan, err := queueManager.UnconfirmedInfoQueue.ReceiveMessages()
+	BtcInfoEventsReceivedChan, err := queueManager.BtcInfoQueue.ReceiveMessages()
 	require.NoError(t, err)
 
-	for _, ev := range unconfirmedInfoEvents {
-		err = queueManager.PushUnconfirmedInfoEvent(ev)
+	for _, ev := range BtcInfoEvents {
+		err = queueManager.PushBtcInfoEvent(ev)
 		require.NoError(t, err)
 
-		receivedEv := <-unconfirmedInfoEventsReceivedChan
-		var unconfirmedInfoEvent client.UnconfirmedInfoEvent
-		err := json.Unmarshal([]byte(receivedEv.Body), &unconfirmedInfoEvent)
+		receivedEv := <-BtcInfoEventsReceivedChan
+		var BtcInfoEvent client.BtcInfoEvent
+		err := json.Unmarshal([]byte(receivedEv.Body), &BtcInfoEvent)
 		require.NoError(t, err)
-		require.Equal(t, ev, &unconfirmedInfoEvent)
+		require.Equal(t, ev, &BtcInfoEvent)
 	}
 }
 

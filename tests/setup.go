@@ -38,14 +38,14 @@ func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *TestServer {
 		client.WithdrawStakingQueueName,
 		client.ExpiredStakingQueueName,
 		client.StakingStatsQueueName,
-		client.UnconfirmedInfoQueueName,
+		client.BtcInfoQueueName,
 		// purge delay queues too
 		client.ActiveStakingQueueName + "_delay",
 		client.UnbondingStakingQueueName + "_delay",
 		client.WithdrawStakingQueueName + "_delay",
 		client.ExpiredStakingQueueName + "_delay",
 		client.StakingStatsQueueName + "_delay",
-		client.UnconfirmedInfoQueueName + "_delay",
+		client.BtcInfoQueueName + "_delay",
 	})
 	require.NoError(t, err)
 
@@ -145,18 +145,19 @@ func buildNExpiryEvents(numOfEvent int) []*client.ExpiredStakingEvent {
 	return expiryEvents
 }
 
-func buildNUnconfirmedInfoEvents(numOfEvent int) []*client.UnconfirmedInfoEvent {
-	var unconfirmedInfoEvents []*client.UnconfirmedInfoEvent
+func buildNBtcInfoEvents(numOfEvent int) []*client.BtcInfoEvent {
+	var BtcInfoEvents []*client.BtcInfoEvent
 	for i := 0; i < numOfEvent; i++ {
-		unconfirmedInfoEv := client.NewUnconfirmedInfoEvent(
+		BtcInfoEv := client.NewBtcInfoEvent(
 			100+uint64(i),
+			10000+uint64(i)*1000,
 			10000+uint64(i)*1000,
 		)
 
-		unconfirmedInfoEvents = append(unconfirmedInfoEvents, &unconfirmedInfoEv)
+		BtcInfoEvents = append(BtcInfoEvents, &BtcInfoEv)
 	}
 
-	return unconfirmedInfoEvents
+	return BtcInfoEvents
 }
 
 // inspectQueueMessageCount inspects the number of messages in the given queue.

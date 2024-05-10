@@ -6,7 +6,7 @@ const (
 	WithdrawStakingQueueName  string = "withdraw_staking_queue"
 	ExpiredStakingQueueName   string = "expired_staking_queue"
 	StakingStatsQueueName     string = "staking_stats_queue"
-	UnconfirmedInfoQueueName  string = "unconfirmed_info_queue"
+	BtcInfoQueueName          string = "unconfirmed_info_queue"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 	WithdrawStakingEventType  EventType = 3
 	ExpiredStakingEventType   EventType = 4
 	StatsEventType            EventType = 5
-	UnconfirmedInfoEventType  EventType = 6
+	BtcInfoEventType          EventType = 6
 )
 
 type EventType int
@@ -190,25 +190,27 @@ func NewStatsEvent(
 	}
 }
 
-type UnconfirmedInfoEvent struct {
-	EventType EventType `json:"event_type"` // always 6. UnconfirmedInfoEventType
-	Height    uint64    `json:"height"`
-	ActiveTvl uint64    `json:"active_tvl"`
+type BtcInfoEvent struct {
+	EventType      EventType `json:"event_type"` // always 6. BtcInfoEventType
+	Height         uint64    `json:"height"`
+	ConfirmedTvl   uint64    `json:"confirmed_tvl"`
+	UnconfirmedTvl uint64    `json:"unconfirmed_tvl"`
 }
 
-func (e UnconfirmedInfoEvent) GetEventType() EventType {
-	return UnconfirmedInfoEventType
+func (e BtcInfoEvent) GetEventType() EventType {
+	return BtcInfoEventType
 }
 
 // Not applicable, add it here to implement the EventMessage interface
-func (e UnconfirmedInfoEvent) GetStakingTxHashHex() string {
+func (e BtcInfoEvent) GetStakingTxHashHex() string {
 	return ""
 }
 
-func NewUnconfirmedInfoEvent(height, tvl uint64) UnconfirmedInfoEvent {
-	return UnconfirmedInfoEvent{
-		EventType: UnconfirmedInfoEventType,
-		Height:    height,
-		ActiveTvl: tvl,
+func NewBtcInfoEvent(height, confirmedTvl, unconfirmedTvl uint64) BtcInfoEvent {
+	return BtcInfoEvent{
+		EventType:      BtcInfoEventType,
+		Height:         height,
+		ConfirmedTvl:   confirmedTvl,
+		UnconfirmedTvl: unconfirmedTvl,
 	}
 }
