@@ -32,7 +32,7 @@ const (
     WithdrawStakingQueueName  string = "withdraw_staking_queue"
     ExpiredStakingQueueName   string = "expired_staking_queue"
     StakingStatsQueueName     string = "staking_stats_queue"
-    BtcInfoQueueName          string = "unconfirmed_info_queue"
+    BtcInfoQueueName          string = "btc_info_queue"
 )
 ```
 
