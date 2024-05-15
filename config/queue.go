@@ -9,10 +9,15 @@ const (
 	defaultQueueUser                = "user"
 	defaultQueuePassword            = "password"
 	defaultQueueUrl                 = "localhost:5672"
-	defaultQueueType                = "quorum"
+	defaultQueueType                = quorumQueueType
 	defaultQueueProcessingTimeout   = 5
 	defaultQueueMsgMaxRetryAttempts = 10
 	defaultReQueueDelayTime         = 5
+)
+
+const (
+	classicQueueType = "classic"
+	quorumQueueType  = "quorum"
 )
 
 type QueueConfig struct {
@@ -56,8 +61,11 @@ func (cfg *QueueConfig) Validate() error {
 		It should be greater than 0, the unit is seconds`)
 	}
 
-	if cfg.QueueType != "classic" && cfg.QueueType != "quorum" {
-		return fmt.Errorf("the queue type should be either `classic` or `quorum`, got %s", cfg.QueueType)
+	switch queueType := cfg.QueueType; queueType {
+	case classicQueueType:
+	case quorumQueueType:
+	default:
+		return fmt.Errorf("unsupported queue type %s", queueType)
 	}
 
 	return nil
