@@ -6,8 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/babylonchain/staking-queue-client/config"
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	"github.com/babylonchain/staking-queue-client/config"
 )
 
 const (
@@ -38,7 +39,16 @@ func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqC
 	}
 
 	// Declare a single common DLX for all queues
-	err = ch.ExchangeDeclare(dlxName, "direct", true, false, false, false, nil)
+	err = ch.ExchangeDeclare(dlxName,
+		"direct",
+		true,
+		false,
+		false,
+		false,
+		amqp.Table{
+			"x-queue-type": config.QueueType,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +65,7 @@ func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqC
 			// Default exchange to route messages back to the main queue
 			// The "" in rabbitMq referring to the default exchange which allows
 			// to route messages to the queue by the routing key which is the queue name
+			"x-queue-type":              config.QueueType,
 			"x-dead-letter-exchange":    "",
 			"x-dead-letter-routing-key": queueName,
 		},
@@ -72,6 +83,7 @@ func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqC
 		false,     // exclusive
 		false,     // no-wait
 		amqp.Table{
+			"x-queue-type":              config.QueueType,
 			"x-dead-letter-exchange":    dlxName,
 			"x-dead-letter-routing-key": customDlxRoutingKey,
 		},
