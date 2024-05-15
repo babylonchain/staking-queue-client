@@ -9,6 +9,7 @@ const (
 	defaultQueueUser                = "user"
 	defaultQueuePassword            = "password"
 	defaultQueueUrl                 = "localhost:5672"
+	defaultQueueType                = "quorum"
 	defaultQueueProcessingTimeout   = 5
 	defaultQueueMsgMaxRetryAttempts = 10
 	defaultReQueueDelayTime         = 5
@@ -18,6 +19,8 @@ type QueueConfig struct {
 	QueueUser     string `mapstructure:"queue_user"`
 	QueuePassword string `mapstructure:"queue_password"`
 	Url           string `mapstructure:"url"`
+	// QueueType defines the type of the queue, classic or quorum, where the latter is replicated
+	QueueType string `mapstructure:"queue_type"`
 	// QueueProcessingTimeout is the maximum time a message will be processed in the application
 	QueueProcessingTimeout time.Duration `mapstructure:"processing_timeout"`
 	// MsgMaxRetryAttempts is the maximum number of times a message will be retried
@@ -53,6 +56,10 @@ func (cfg *QueueConfig) Validate() error {
 		It should be greater than 0, the unit is seconds`)
 	}
 
+	if cfg.QueueType != "classic" && cfg.QueueType != "quorum" {
+		return fmt.Errorf("the queue type should be either `classic` or `quorum`, got %s", cfg.QueueType)
+	}
+
 	return nil
 }
 
@@ -60,6 +67,7 @@ func DefaultQueueConfig() *QueueConfig {
 	return &QueueConfig{
 		QueueUser:              defaultQueueUser,
 		QueuePassword:          defaultQueuePassword,
+		QueueType:              defaultQueueType,
 		Url:                    defaultQueueUrl,
 		QueueProcessingTimeout: defaultQueueProcessingTimeout,
 		MsgMaxRetryAttempts:    defaultQueueMsgMaxRetryAttempts,
