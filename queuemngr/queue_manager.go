@@ -74,12 +74,12 @@ func (qc *QueueManager) PushStakingEvent(ev *client.ActiveStakingEvent) error {
 	}
 	messageBody := string(jsonBytes)
 
-	qc.logger.Info("pushing staking event", zap.String("tx_hash", ev.StakingTxHex))
+	qc.logger.Info("pushing staking event", zap.String("tx_hash", ev.StakingTxHashHex))
 	err = qc.StakingQueue.SendMessage(context.TODO(), messageBody)
 	if err != nil {
 		return fmt.Errorf("failed to push staking event: %w", err)
 	}
-	qc.logger.Info("successfully pushed staking event", zap.String("tx_hash", ev.StakingTxHex))
+	qc.logger.Info("successfully pushed staking event", zap.String("tx_hash", ev.StakingTxHashHex))
 
 	return nil
 }
@@ -91,12 +91,12 @@ func (qc *QueueManager) PushUnbondingEvent(ev *client.UnbondingStakingEvent) err
 	}
 	messageBody := string(jsonBytes)
 
-	qc.logger.Info("pushing unbonding event", zap.String("tx_hash", ev.StakingTxHashHex))
+	qc.logger.Info("pushing unbonding event", zap.String("staking_tx_hash", ev.UnbondingTxHashHex))
 	err = qc.UnbondingQueue.SendMessage(context.TODO(), messageBody)
 	if err != nil {
 		return fmt.Errorf("failed to push unbonding event: %w", err)
 	}
-	qc.logger.Info("successfully pushed unbonding event", zap.String("tx_hash", ev.StakingTxHashHex))
+	qc.logger.Info("successfully pushed unbonding event", zap.String("staking_tx_hash", ev.UnbondingTxHashHex))
 
 	return nil
 }
@@ -108,12 +108,12 @@ func (qc *QueueManager) PushWithdrawEvent(ev *client.WithdrawStakingEvent) error
 	}
 	messageBody := string(jsonBytes)
 
-	qc.logger.Info("pushing withdraw event", zap.String("tx_hash", ev.StakingTxHashHex))
+	qc.logger.Info("pushing withdraw event", zap.String("staking_tx_hash", ev.StakingTxHashHex))
 	err = qc.WithdrawQueue.SendMessage(context.TODO(), messageBody)
 	if err != nil {
 		return fmt.Errorf("failed to push withdraw event: %w", err)
 	}
-	qc.logger.Info("successfully pushed withdraw event", zap.String("tx_hash", ev.StakingTxHashHex))
+	qc.logger.Info("successfully pushed withdraw event", zap.String("staking_tx_hash", ev.StakingTxHashHex))
 
 	return nil
 }
@@ -147,7 +147,7 @@ func (qc *QueueManager) PushBtcInfoEvent(ev *client.BtcInfoEvent) error {
 	if err != nil {
 		return fmt.Errorf("failed to push btc info event: %w", err)
 	}
-	qc.logger.Info("successfully pushed confirmed info event", zap.Uint64("height", ev.Height))
+	qc.logger.Info("successfully pushed btc info event", zap.Uint64("height", ev.Height))
 
 	return nil
 }
