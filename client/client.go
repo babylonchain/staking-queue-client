@@ -23,6 +23,7 @@ func (m QueueMessage) GetRetryAttempts() int32 {
 
 // A common interface for queue clients regardless if it's a SQS, RabbitMQ, etc.
 type QueueClient interface {
+	StartConnectionHealthCheck(amqpURI string) <-chan error
 	SendMessage(ctx context.Context, messageBody string) error
 	ReceiveMessages() (<-chan QueueMessage, error)
 	DeleteMessage(receipt string) error

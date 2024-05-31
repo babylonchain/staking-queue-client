@@ -9,6 +9,7 @@ const (
 	defaultQueueUser                = "user"
 	defaultQueuePassword            = "password"
 	defaultQueueUrl                 = "localhost:5672"
+	defaultConnectionCheckPeriod    = 5
 	defaultQueueType                = QuorumQueueType
 	defaultQueueProcessingTimeout   = 5
 	defaultQueueMsgMaxRetryAttempts = 10
@@ -21,9 +22,10 @@ const (
 )
 
 type QueueConfig struct {
-	QueueUser     string `mapstructure:"queue_user"`
-	QueuePassword string `mapstructure:"queue_password"`
-	Url           string `mapstructure:"url"`
+	QueueUser             string        `mapstructure:"queue_user"`
+	QueuePassword         string        `mapstructure:"queue_password"`
+	Url                   string        `mapstructure:"url"`
+	ConnectionCheckPeriod time.Duration `mapstructure:"connection_check_period"`
 	// QueueType defines the type of the queue, classic or quorum, where the latter is replicated
 	QueueType string `mapstructure:"queue_type"`
 	// QueueProcessingTimeout is the maximum time a message will be processed in the application
@@ -61,6 +63,11 @@ func (cfg *QueueConfig) Validate() error {
 		It should be greater than 0, the unit is seconds`)
 	}
 
+	if cfg.ConnectionCheckPeriod <= 0 {
+		return fmt.Errorf(`invalid connection check period.
+		It should be greater than 0, the unit is seconds`)
+	}
+
 	switch queueType := cfg.QueueType; queueType {
 	case ClassicQueueType:
 	case QuorumQueueType:
@@ -77,6 +84,7 @@ func DefaultQueueConfig() *QueueConfig {
 		QueuePassword:          defaultQueuePassword,
 		QueueType:              defaultQueueType,
 		Url:                    defaultQueueUrl,
+		ConnectionCheckPeriod:  defaultConnectionCheckPeriod,
 		QueueProcessingTimeout: defaultQueueProcessingTimeout,
 		MsgMaxRetryAttempts:    defaultQueueMsgMaxRetryAttempts,
 		ReQueueDelayTime:       defaultReQueueDelayTime,

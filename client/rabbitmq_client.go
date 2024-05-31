@@ -23,6 +23,7 @@ type RabbitMqClient struct {
 	queueName          string
 	stopCh             chan struct{} // This is used to gracefully stop the message receiving loop
 	delayedRequeueTime time.Duration
+	cfg                *config.QueueConfig
 }
 
 func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqClient, error) {
@@ -109,7 +110,41 @@ func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqC
 		queueName:          queueName,
 		stopCh:             make(chan struct{}),
 		delayedRequeueTime: time.Duration(config.ReQueueDelayTime) * time.Second,
+		cfg:                config,
 	}, nil
+}
+
+// startConnectionHealthCheck starts a goroutine that checks the connection health every 10 seconds.
+// If the connection is closed, it will attempt to reconnect.
+func (c *RabbitMqClient) StartConnectionHealthCheck(amqpURI string) <-chan error {
+	ticker := time.NewTicker(c.cfg.ConnectionCheckPeriod)
+	defer ticker.Stop()
+
+	errChan := make(chan error)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				if !c.connection.IsClosed() {
+					continue
+				}
+				// Connection is closed, attempt to reconnect
+				var err error
+				c.connection, err = amqp.Dial(amqpURI)
+				if err != nil {
+					errChan <- err
+				}
+
+				c.channel, err = c.connection.Channel()
+				if err != nil {
+					errChan <- err
+				}
+			case <-c.stopCh:
+				return
+			}
+		}
+	}()
+	return errChan
 }
 
 func (c *RabbitMqClient) ReceiveMessages() (<-chan QueueMessage, error) {
