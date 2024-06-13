@@ -29,7 +29,8 @@ func TestClientPing(t *testing.T) {
 	require.NoError(t, err, "Ping should not return an error")
 
 	// Simulate a closed connection scenario
-	queueManager.StakingQueue.CloseConnection()
+	err = queueManager.StakingQueue.CloseConnection()
+	require.NoError(t, err, "CloseConnection should not return an error")
 	err = queueManager.StakingQueue.Ping()
 	require.Error(t, err, "Ping should return an error when connection is closed")
 	require.Contains(t, err.Error(), "rabbitMQ connection is closed", "Error message should indicate the connection is closed")
@@ -48,7 +49,8 @@ func TestPing(t *testing.T) {
 	require.NoError(t, err, "Ping should not return an error")
 
 	// Simulate a closed connection scenario for StakingQueue
-	queueManager.StakingQueue.CloseConnection()
+	err = queueManager.StakingQueue.CloseConnection()
+	require.NoError(t, err, "CloseConnection should not return an error")
 	err = queueManager.Ping()
 	require.Error(t, err, "Ping should return an error when any queue connection is closed")
 	require.Contains(t, err.Error(), "ping failed for active_staking_queue", "Error message should indicate which queue failed")
