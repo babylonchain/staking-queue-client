@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -23,6 +24,7 @@ type RabbitMqClient struct {
 	queueName          string
 	stopCh             chan struct{} // This is used to gracefully stop the message receiving loop
 	delayedRequeueTime time.Duration
+  once 							 sync.Once
 }
 
 func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqClient, error) {
@@ -119,20 +121,25 @@ func (c *RabbitMqClient) Ping() error {
 		return fmt.Errorf("rabbitMQ connection is closed")
 	}
 
+	// Check if the RabbitMQ channel is closed
+	if c.channel.IsClosed() {
+		return fmt.Errorf("rabbitMQ channel is closed")
+	}
+
 	// Test if there are errors when communicating with the channel.
-	err := c.channel.Qos(1, 0, false)
+	_, err := c.channel.QueueDeclarePassive(
+		c.queueName, // name of the queue
+		true,        // durable
+		false,       // delete when unused
+		false,       // exclusive
+		false,       // no-wait
+		nil,         // args
+	)
 	if err != nil {
 		return fmt.Errorf("failed to communicate with RabbitMQ: %w", err)
 	}
 
 	return nil
-}
-
-func (c *RabbitMqClient) CloseConnection() error {
-    if err := c.channel.Close(); err != nil {
-        return err
-    }
-    return c.connection.Close()
 }
 
 func (c *RabbitMqClient) ReceiveMessages() (<-chan QueueMessage, error) {
@@ -265,7 +272,9 @@ func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) er
 
 // Stop stops the message receiving process.
 func (c *RabbitMqClient) Stop() error {
-	close(c.stopCh) // Signal to stop receiving messages
+	c.once.Do(func() {
+		close(c.stopCh)
+	})
 
 	if err := c.channel.Close(); err != nil {
 		return err
