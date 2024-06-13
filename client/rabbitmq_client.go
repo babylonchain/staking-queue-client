@@ -124,19 +124,6 @@ func (c *RabbitMqClient) Ping() error {
 		return fmt.Errorf("rabbitMQ channel is closed")
 	}
 
-	// Test if there are errors when communicating with the channel.
-	_, err := c.channel.QueueDeclarePassive(
-		c.queueName, // name of the queue
-		true,        // durable
-		false,       // delete when unused
-		false,       // exclusive
-		false,       // no-wait
-		nil,         // args
-	)
-	if err != nil {
-		return fmt.Errorf("failed to communicate with RabbitMQ: %w", err)
-	}
-
 	return nil
 }
 
