@@ -16,6 +16,19 @@ const (
 	mockStakerHash = "0x1234567890abcdef"
 )
 
+func TestClientPing(t *testing.T) {
+	queueCfg := config.DefaultQueueConfig()
+
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
+
+	// test staking queue ping
+	err := queueManager.StakingQueue.Ping();
+	require.NoError(t, err, "Ping should not return an error")
+}
+
 func TestPing(t *testing.T) {
 	queueCfg := config.DefaultQueueConfig()
 
