@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -24,7 +23,6 @@ type RabbitMqClient struct {
 	queueName          string
 	stopCh             chan struct{} // This is used to gracefully stop the message receiving loop
 	delayedRequeueTime time.Duration
-  once 							 sync.Once
 }
 
 func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqClient, error) {
@@ -272,16 +270,14 @@ func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) er
 
 // Stop stops the message receiving process.
 func (c *RabbitMqClient) Stop() error {
-	c.once.Do(func() {
-		close(c.stopCh)
-	})
-
 	if err := c.channel.Close(); err != nil {
 		return err
 	}
 	if err := c.connection.Close(); err != nil {
 		return err
 	}
+
+	close(c.stopCh)
 
 	return nil
 }
