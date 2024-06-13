@@ -128,6 +128,12 @@ func (c *RabbitMqClient) Ping() error {
 	return nil
 }
 
+func (c *RabbitMqClient) CloseConnection() error {
+    if err := c.channel.Close(); err != nil {
+        return err
+    }
+    return c.connection.Close()
+}
 
 func (c *RabbitMqClient) ReceiveMessages() (<-chan QueueMessage, error) {
 	msgs, err := c.channel.Consume(

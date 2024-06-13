@@ -21,11 +21,13 @@ type TestServer struct {
 }
 
 func (ts *TestServer) Stop(t *testing.T) {
-	err := ts.QueueManager.Stop()
-	require.NoError(t, err)
-	err = ts.Conn.Close()
-	require.NoError(t, err)
+    if err := ts.QueueManager.Stop(); err != nil && !isConnectionClosedError(err) {
+        t.Errorf("failed to stop QueueManager: %v", err)
+    }
 
+    if err := ts.Conn.Close(); err != nil && !isConnectionClosedError(err) {
+        t.Errorf("failed to close connection: %v", err)
+    }
 }
 
 func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *TestServer {
@@ -175,4 +177,9 @@ func inspectQueueMessageCount(t *testing.T, conn *amqp091.Connection, queueName 
 		return 0, fmt.Errorf("failed to inspect queue in test %s: %w", queueName, err)
 	}
 	return q.Messages, nil
+}
+
+// Helper function to check if an error is related to a closed connection
+func isConnectionClosedError(err error) bool {
+    return err != nil && (strings.Contains(err.Error(), "connection is not open") || strings.Contains(err.Error(), "channel/connection is not open"))
 }
