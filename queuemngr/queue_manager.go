@@ -199,3 +199,24 @@ func (qc *QueueManager) Stop() error {
 
 	return nil
 }
+
+
+// Ping checks the health of the RabbitMQ infrastructure.
+func (qc *QueueManager) Ping() error {
+	queues := map[string]client.QueueClient{
+		client.ActiveStakingQueueName:   qc.StakingQueue,
+		client.UnbondingStakingQueueName: qc.UnbondingQueue,
+		client.WithdrawStakingQueueName:  qc.WithdrawQueue,
+		client.ExpiredStakingQueueName:    qc.ExpiryQueue,
+		client.StakingStatsQueueName:     qc.StatsQueue,
+		client.BtcInfoQueueName:   qc.BtcInfoQueue,
+	}
+
+	for name, queue := range queues {
+		if err := queue.Ping(); err != nil {
+			return fmt.Errorf("ping failed for %s: %w", name, err)
+		}
+	}
+
+	return nil
+}

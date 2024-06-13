@@ -16,6 +16,18 @@ const (
 	mockStakerHash = "0x1234567890abcdef"
 )
 
+func TestPing(t *testing.T) {
+	queueCfg := config.DefaultQueueConfig()
+
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
+
+	err := queueManager.Ping();
+	require.NoError(t, err, "Ping should not return an error")
+}
+
 func TestStakingEvent(t *testing.T) {
 	numStakingEvents := 3
 	activeStakingEvents := buildActiveNStakingEvents(mockStakerHash, numStakingEvents)

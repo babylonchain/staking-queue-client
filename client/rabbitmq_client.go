@@ -112,6 +112,23 @@ func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqC
 	}, nil
 }
 
+// Ping checks the health of the RabbitMQ infrastructure.
+func (c *RabbitMqClient) Ping() error {
+	// Check if the RabbitMQ connection is closed
+	if c.connection.IsClosed() {
+		return fmt.Errorf("rabbitMQ connection is closed")
+	}
+
+	// Test if there are errors when communicating with the channel.
+	err := c.channel.Qos(1, 0, false)
+	if err != nil {
+		return fmt.Errorf("failed to communicate with RabbitMQ: %w", err)
+	}
+
+	return nil
+}
+
+
 func (c *RabbitMqClient) ReceiveMessages() (<-chan QueueMessage, error) {
 	msgs, err := c.channel.Consume(
 		c.queueName, // queueName
