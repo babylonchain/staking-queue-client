@@ -112,6 +112,21 @@ func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqC
 	}, nil
 }
 
+// Ping checks the health of the RabbitMQ infrastructure.
+func (c *RabbitMqClient) Ping() error {
+	// Check if the RabbitMQ connection is closed
+	if c.connection.IsClosed() {
+		return fmt.Errorf("rabbitMQ connection is closed")
+	}
+
+	// Check if the RabbitMQ channel is closed
+	if c.channel.IsClosed() {
+		return fmt.Errorf("rabbitMQ channel is closed")
+	}
+
+	return nil
+}
+
 func (c *RabbitMqClient) ReceiveMessages() (<-chan QueueMessage, error) {
 	msgs, err := c.channel.Consume(
 		c.queueName, // queueName
@@ -242,14 +257,14 @@ func (c *RabbitMqClient) SendMessage(ctx context.Context, messageBody string) er
 
 // Stop stops the message receiving process.
 func (c *RabbitMqClient) Stop() error {
-	close(c.stopCh) // Signal to stop receiving messages
-
 	if err := c.channel.Close(); err != nil {
 		return err
 	}
 	if err := c.connection.Close(); err != nil {
 		return err
 	}
+
+	close(c.stopCh)
 
 	return nil
 }

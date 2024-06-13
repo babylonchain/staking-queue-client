@@ -16,6 +16,46 @@ const (
 	mockStakerHash = "0x1234567890abcdef"
 )
 
+func TestClientPing(t *testing.T) {
+	queueCfg := config.DefaultQueueConfig()
+
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
+
+	// Test successful ping
+	err := queueManager.StakingQueue.Ping()
+	require.NoError(t, err, "Ping should not return an error")
+
+	// Simulate a closed connection scenario
+	err = queueManager.StakingQueue.Stop()
+	require.NoError(t, err, "Stop should not return an error")
+	err = queueManager.StakingQueue.Ping()
+	require.Error(t, err, "Ping should return an error when connection is closed")
+	require.Contains(t, err.Error(), "rabbitMQ connection is closed", "Error message should indicate the connection is closed")
+}
+
+func TestPing(t *testing.T) {
+	queueCfg := config.DefaultQueueConfig()
+
+	testServer := setupTestQueueConsumer(t, queueCfg)
+	defer testServer.Stop(t)
+
+	queueManager := testServer.QueueManager
+
+	// Test successful ping for all queues
+	err := queueManager.Ping()
+	require.NoError(t, err, "Ping should not return an error")
+
+	// Simulate a closed connection scenario for StakingQueue
+	err = queueManager.StakingQueue.Stop()
+	require.NoError(t, err, "Stop should not return an error")
+	err = queueManager.Ping()
+	require.Error(t, err, "Ping should return an error when any queue connection is closed")
+	require.Contains(t, err.Error(), "ping failed for active_staking_queue", "Error message should indicate which queue failed")
+}
+
 func TestStakingEvent(t *testing.T) {
 	numStakingEvents := 3
 	activeStakingEvents := buildActiveNStakingEvents(mockStakerHash, numStakingEvents)
