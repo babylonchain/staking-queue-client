@@ -24,14 +24,24 @@ func TestClientPing(t *testing.T) {
 
 	queueManager := testServer.QueueManager
 
-	// Test successful ping
-	err := queueManager.StakingQueue.Ping()
+	// Define a timeout for the context
+	timeout := 5 * time.Second
+
+	// Test successful ping with context
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	err := queueManager.StakingQueue.Ping(ctx)
 	require.NoError(t, err, "Ping should not return an error")
 
 	// Simulate a closed connection scenario
 	err = queueManager.StakingQueue.Stop()
 	require.NoError(t, err, "Stop should not return an error")
-	err = queueManager.StakingQueue.Ping()
+
+	ctx, cancel = context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	err = queueManager.StakingQueue.Ping(ctx)
 	require.Error(t, err, "Ping should return an error when connection is closed")
 	require.Contains(t, err.Error(), "rabbitMQ connection is closed", "Error message should indicate the connection is closed")
 }
@@ -53,7 +63,7 @@ func TestPing(t *testing.T) {
 	require.NoError(t, err, "Stop should not return an error")
 	err = queueManager.Ping()
 	require.Error(t, err, "Ping should return an error when any queue connection is closed")
-	require.Contains(t, err.Error(), "ping failed for active_staking_queue", "Error message should indicate which queue failed")
+	require.Contains(t, err.Error(), "rabbitMQ connection is closed", "Error message should indicate which queue failed")
 }
 
 func TestStakingEvent(t *testing.T) {
