@@ -113,15 +113,20 @@ func NewRabbitMqClient(config *config.QueueConfig, queueName string) (*RabbitMqC
 }
 
 // Ping checks the health of the RabbitMQ infrastructure.
-func (c *RabbitMqClient) Ping() error {
-	// Check if the RabbitMQ connection is closed
-	if c.connection.IsClosed() {
-		return fmt.Errorf("rabbitMQ connection is closed")
-	}
+func (c *RabbitMqClient) Ping(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		// Check if the RabbitMQ connection is closed
+		if c.connection.IsClosed() {
+			return fmt.Errorf("rabbitMQ connection is closed")
+		}
 
-	// Check if the RabbitMQ channel is closed
-	if c.channel.IsClosed() {
-		return fmt.Errorf("rabbitMQ channel is closed")
+		// Check if the RabbitMQ channel is closed
+		if c.channel.IsClosed() {
+			return fmt.Errorf("rabbitMQ channel is closed")
+		}
 	}
 
 	return nil

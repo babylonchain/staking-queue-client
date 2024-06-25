@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -203,20 +204,27 @@ func (qc *QueueManager) Stop() error {
 
 // Ping checks the health of the RabbitMQ infrastructure.
 func (qc *QueueManager) Ping() error {
-	queues := map[string]client.QueueClient{
-		client.ActiveStakingQueueName:   qc.StakingQueue,
-		client.UnbondingStakingQueueName: qc.UnbondingQueue,
-		client.WithdrawStakingQueueName:  qc.WithdrawQueue,
-		client.ExpiredStakingQueueName:    qc.ExpiryQueue,
-		client.StakingStatsQueueName:     qc.StatsQueue,
-		client.BtcInfoQueueName:   qc.BtcInfoQueue,
+	timeout := 5 * time.Second
+
+	queues := []client.QueueClient{
+		qc.StakingQueue,
+		qc.UnbondingQueue,
+		qc.WithdrawQueue,
+		qc.ExpiryQueue,
+		qc.StatsQueue,
+		qc.BtcInfoQueue,
 	}
 
-	for name, queue := range queues {
-		if err := queue.Ping(); err != nil {
-			return fmt.Errorf("ping failed for %s: %w", name, err)
+	for _, queue := range queues {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		err := queue.Ping(ctx)
+		if err != nil {
+			qc.logger.Error("ping failed", zap.String("queue", queue.GetQueueName()), zap.Error(err))
+			return err
 		}
+		qc.logger.Info("ping successful", zap.String("queue", queue.GetQueueName()))
 	}
-
 	return nil
 }
