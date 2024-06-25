@@ -12,6 +12,8 @@ import (
 	"github.com/babylonchain/staking-queue-client/config"
 )
 
+const timeout = 5 * time.Second
+
 type QueueManager struct {
 	StakingQueue   client.QueueClient
 	UnbondingQueue client.QueueClient
@@ -204,8 +206,6 @@ func (qc *QueueManager) Stop() error {
 
 // Ping checks the health of the RabbitMQ infrastructure.
 func (qc *QueueManager) Ping() error {
-	timeout := 5 * time.Second
-
 	queues := []client.QueueClient{
 		qc.StakingQueue,
 		qc.UnbondingQueue,
