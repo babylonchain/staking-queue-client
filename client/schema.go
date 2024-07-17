@@ -191,10 +191,18 @@ func NewStatsEvent(
 }
 
 type BtcInfoEvent struct {
-	EventType      EventType `json:"event_type"` // always 6. BtcInfoEventType
-	Height         uint64    `json:"height"`
-	ConfirmedTvl   uint64    `json:"confirmed_tvl"`
-	UnconfirmedTvl uint64    `json:"unconfirmed_tvl"`
+	// always 6. BtcInfoEventType
+	EventType EventType `json:"event_type"`
+	// the current height of BTC
+	TipHeight uint64 `json:"tip_height"`
+	// the TVL up to TipHeight
+	TipTvl uint64 `json:"tip_tvl"`
+	// the confirmed BTC height calculated by
+	// TipHeight - ConfirmationDepth + 1 where ConfirmationDepth
+	// is part of the global parameter
+	ConfirmedHeight uint64 `json:"confirmed_height"`
+	// the TVL up to ConfirmedHeight
+	ConfirmedTvl uint64 `json:"confirmed_tvl"`
 }
 
 func (e BtcInfoEvent) GetEventType() EventType {
@@ -206,11 +214,12 @@ func (e BtcInfoEvent) GetStakingTxHashHex() string {
 	return ""
 }
 
-func NewBtcInfoEvent(height, confirmedTvl, unconfirmedTvl uint64) BtcInfoEvent {
+func NewBtcInfoEvent(tipHeight, confirmedHeight, confirmedTvl, tipTvl uint64) BtcInfoEvent {
 	return BtcInfoEvent{
-		EventType:      BtcInfoEventType,
-		Height:         height,
-		ConfirmedTvl:   confirmedTvl,
-		UnconfirmedTvl: unconfirmedTvl,
+		EventType:       BtcInfoEventType,
+		TipHeight:       tipHeight,
+		TipTvl:          tipTvl,
+		ConfirmedHeight: confirmedHeight,
+		ConfirmedTvl:    confirmedTvl,
 	}
 }

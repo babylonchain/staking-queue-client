@@ -145,12 +145,16 @@ func (qc *QueueManager) PushBtcInfoEvent(ev *client.BtcInfoEvent) error {
 	}
 	messageBody := string(jsonBytes)
 
-	qc.logger.Info("pushing btc info event", zap.Uint64("height", ev.Height))
+	qc.logger.Info("pushing btc info event",
+		zap.Uint64("tip_height", ev.TipHeight),
+		zap.Uint64("tip_tvl", ev.TipTvl),
+		zap.Uint64("confirmed_height", ev.ConfirmedHeight),
+		zap.Uint64("confirmed_tvl", ev.ConfirmedTvl))
 	err = qc.BtcInfoQueue.SendMessage(context.TODO(), messageBody)
 	if err != nil {
 		return fmt.Errorf("failed to push btc info event: %w", err)
 	}
-	qc.logger.Info("successfully pushed btc info event", zap.Uint64("height", ev.Height))
+	qc.logger.Info("successfully pushed btc info event")
 
 	return nil
 }
@@ -202,7 +206,6 @@ func (qc *QueueManager) Stop() error {
 
 	return nil
 }
-
 
 // Ping checks the health of the RabbitMQ infrastructure.
 func (qc *QueueManager) Ping() error {

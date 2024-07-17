@@ -21,13 +21,13 @@ type TestServer struct {
 }
 
 func (ts *TestServer) Stop(t *testing.T) {
-    if err := ts.QueueManager.Stop(); err != nil && !isConnectionClosedError(err) {
-        t.Errorf("failed to stop QueueManager: %v", err)
-    }
+	if err := ts.QueueManager.Stop(); err != nil && !isConnectionClosedError(err) {
+		t.Errorf("failed to stop QueueManager: %v", err)
+	}
 
-    if err := ts.Conn.Close(); err != nil && !isConnectionClosedError(err) {
-        t.Errorf("failed to close connection: %v", err)
-    }
+	if err := ts.Conn.Close(); err != nil && !isConnectionClosedError(err) {
+		t.Errorf("failed to close connection: %v", err)
+	}
 }
 
 func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *TestServer {
@@ -150,8 +150,10 @@ func buildNExpiryEvents(numOfEvent int) []*client.ExpiredStakingEvent {
 func buildNBtcInfoEvents(numOfEvent int) []*client.BtcInfoEvent {
 	var BtcInfoEvents []*client.BtcInfoEvent
 	for i := 0; i < numOfEvent; i++ {
+		confirmedHeight := 100 + uint64(i)
 		BtcInfoEv := client.NewBtcInfoEvent(
-			100+uint64(i),
+			confirmedHeight+10,
+			confirmedHeight,
 			10000+uint64(i)*1000,
 			10000+uint64(i)*1000,
 		)
@@ -181,5 +183,5 @@ func inspectQueueMessageCount(t *testing.T, conn *amqp091.Connection, queueName 
 
 // Helper function to check if an error is related to a closed connection
 func isConnectionClosedError(err error) bool {
-    return err != nil && (strings.Contains(err.Error(), "connection is not open") || strings.Contains(err.Error(), "channel/connection is not open"))
+	return err != nil && (strings.Contains(err.Error(), "connection is not open") || strings.Contains(err.Error(), "channel/connection is not open"))
 }
