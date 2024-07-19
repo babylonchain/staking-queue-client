@@ -21,13 +21,13 @@ type TestServer struct {
 }
 
 func (ts *TestServer) Stop(t *testing.T) {
-    if err := ts.QueueManager.Stop(); err != nil && !isConnectionClosedError(err) {
-        t.Errorf("failed to stop QueueManager: %v", err)
-    }
+	if err := ts.QueueManager.Stop(); err != nil && !isConnectionClosedError(err) {
+		t.Errorf("failed to stop QueueManager: %v", err)
+	}
 
-    if err := ts.Conn.Close(); err != nil && !isConnectionClosedError(err) {
-        t.Errorf("failed to close connection: %v", err)
-    }
+	if err := ts.Conn.Close(); err != nil && !isConnectionClosedError(err) {
+		t.Errorf("failed to close connection: %v", err)
+	}
 }
 
 func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *TestServer {
@@ -41,6 +41,7 @@ func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *TestServer {
 		client.ExpiredStakingQueueName,
 		client.StakingStatsQueueName,
 		client.BtcInfoQueueName,
+		client.ConfirmedInfoQueueName,
 		// purge delay queues too
 		client.ActiveStakingQueueName + "_delay",
 		client.UnbondingStakingQueueName + "_delay",
@@ -48,6 +49,7 @@ func setupTestQueueConsumer(t *testing.T, cfg *config.QueueConfig) *TestServer {
 		client.ExpiredStakingQueueName + "_delay",
 		client.StakingStatsQueueName + "_delay",
 		client.BtcInfoQueueName + "_delay",
+		client.ConfirmedInfoQueueName + "_delay",
 	})
 	require.NoError(t, err)
 
@@ -148,18 +150,32 @@ func buildNExpiryEvents(numOfEvent int) []*client.ExpiredStakingEvent {
 }
 
 func buildNBtcInfoEvents(numOfEvent int) []*client.BtcInfoEvent {
-	var BtcInfoEvents []*client.BtcInfoEvent
+	var btcInfoEvents []*client.BtcInfoEvent
 	for i := 0; i < numOfEvent; i++ {
-		BtcInfoEv := client.NewBtcInfoEvent(
+		btcInfoEv := client.NewBtcInfoEvent(
 			100+uint64(i),
 			10000+uint64(i)*1000,
 			10000+uint64(i)*1000,
 		)
 
-		BtcInfoEvents = append(BtcInfoEvents, &BtcInfoEv)
+		btcInfoEvents = append(btcInfoEvents, &btcInfoEv)
 	}
 
-	return BtcInfoEvents
+	return btcInfoEvents
+}
+
+func buildNConfirmedInfoEvents(numOfEvent int) []*client.ConfirmedInfoEvent {
+	var confirmedInfoEvents []*client.ConfirmedInfoEvent
+	for i := 0; i < numOfEvent; i++ {
+		confirmedInfoEv := client.NewConfirmedInfoEvent(
+			100+uint64(i),
+			10000+uint64(i)*1000,
+		)
+
+		confirmedInfoEvents = append(confirmedInfoEvents, &confirmedInfoEv)
+	}
+
+	return confirmedInfoEvents
 }
 
 // inspectQueueMessageCount inspects the number of messages in the given queue.
@@ -181,5 +197,5 @@ func inspectQueueMessageCount(t *testing.T, conn *amqp091.Connection, queueName 
 
 // Helper function to check if an error is related to a closed connection
 func isConnectionClosedError(err error) bool {
-    return err != nil && (strings.Contains(err.Error(), "connection is not open") || strings.Contains(err.Error(), "channel/connection is not open"))
+	return err != nil && (strings.Contains(err.Error(), "connection is not open") || strings.Contains(err.Error(), "channel/connection is not open"))
 }
