@@ -15,13 +15,14 @@ import (
 const timeout = 5 * time.Second
 
 type QueueManager struct {
-	StakingQueue   client.QueueClient
-	UnbondingQueue client.QueueClient
-	WithdrawQueue  client.QueueClient
-	ExpiryQueue    client.QueueClient
-	StatsQueue     client.QueueClient
-	BtcInfoQueue   client.QueueClient
-	logger         *zap.Logger
+	StakingQueue       client.QueueClient
+	UnbondingQueue     client.QueueClient
+	WithdrawQueue      client.QueueClient
+	ExpiryQueue        client.QueueClient
+	StatsQueue         client.QueueClient
+	BtcInfoQueue       client.QueueClient
+	ConfirmedInfoQueue client.QueueClient
+	logger             *zap.Logger
 }
 
 func NewQueueManager(cfg *config.QueueConfig, logger *zap.Logger) (*QueueManager, error) {
@@ -50,19 +51,25 @@ func NewQueueManager(cfg *config.QueueConfig, logger *zap.Logger) (*QueueManager
 		return nil, fmt.Errorf("failed to create stats queue: %w", err)
 	}
 
-	BtcInfoQueue, err := client.NewQueueClient(cfg, client.BtcInfoQueueName)
+	btcInfoQueue, err := client.NewQueueClient(cfg, client.BtcInfoQueueName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create btc info queue: %w", err)
 	}
 
+	confirmedInfoQueue, err := client.NewQueueClient(cfg, client.ConfirmedInfoQueueName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create confirmed info queue: %w", err)
+	}
+
 	return &QueueManager{
-		StakingQueue:   stakingQueue,
-		UnbondingQueue: unbondingQueue,
-		WithdrawQueue:  withdrawQueue,
-		ExpiryQueue:    expiryQueue,
-		StatsQueue:     statsQueue,
-		BtcInfoQueue:   BtcInfoQueue,
-		logger:         logger.With(zap.String("module", "queue consumer")),
+		StakingQueue:       stakingQueue,
+		UnbondingQueue:     unbondingQueue,
+		WithdrawQueue:      withdrawQueue,
+		ExpiryQueue:        expiryQueue,
+		StatsQueue:         statsQueue,
+		BtcInfoQueue:       btcInfoQueue,
+		ConfirmedInfoQueue: confirmedInfoQueue,
+		logger:             logger.With(zap.String("module", "queue consumer")),
 	}, nil
 }
 
@@ -155,6 +162,26 @@ func (qc *QueueManager) PushBtcInfoEvent(ev *client.BtcInfoEvent) error {
 	return nil
 }
 
+func (qc *QueueManager) PushConfirmedInfoEvent(ev *client.ConfirmedInfoEvent) error {
+	jsonBytes, err := json.Marshal(ev)
+	if err != nil {
+		return err
+	}
+	messageBody := string(jsonBytes)
+
+	qc.logger.Info("pushing confirmed info event",
+		zap.Uint64("height", ev.Height),
+		zap.Uint64("tvl", ev.Tvl),
+	)
+	err = qc.ConfirmedInfoQueue.SendMessage(context.TODO(), messageBody)
+	if err != nil {
+		return fmt.Errorf("failed to push confirmed info event: %w", err)
+	}
+	qc.logger.Info("successfully pushed confirmed info event", zap.Uint64("height", ev.Height))
+
+	return nil
+}
+
 // requeue message
 func (qc *QueueManager) ReQueueMessage(ctx context.Context, message client.QueueMessage, queueName string) error {
 	switch queueName {
@@ -170,6 +197,8 @@ func (qc *QueueManager) ReQueueMessage(ctx context.Context, message client.Queue
 		return qc.StatsQueue.ReQueueMessage(ctx, message)
 	case client.BtcInfoQueueName:
 		return qc.BtcInfoQueue.ReQueueMessage(ctx, message)
+	case client.ConfirmedInfoQueueName:
+		return qc.ConfirmedInfoQueue.ReQueueMessage(ctx, message)
 	default:
 		return fmt.Errorf("unknown queue name: %s", queueName)
 	}
@@ -200,9 +229,12 @@ func (qc *QueueManager) Stop() error {
 		return err
 	}
 
+	if err := qc.ConfirmedInfoQueue.Stop(); err != nil {
+		return err
+	}
+
 	return nil
 }
-
 
 // Ping checks the health of the RabbitMQ infrastructure.
 func (qc *QueueManager) Ping() error {
@@ -213,6 +245,7 @@ func (qc *QueueManager) Ping() error {
 		qc.ExpiryQueue,
 		qc.StatsQueue,
 		qc.BtcInfoQueue,
+		qc.ConfirmedInfoQueue,
 	}
 
 	for _, queue := range queues {
